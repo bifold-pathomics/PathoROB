@@ -1,5 +1,7 @@
 # PathoROB
 
+## 1) Installation
+
 Requirements for feature extraction:
 - numpy
 - pandas
@@ -22,6 +24,8 @@ Additional requirements for PathoROB repository:
 - matplotlib==3.9.2
 - seaborn==0.13.2
 
+
+## 2) Feature Extraction
 
 How to run feature extraction:
 
