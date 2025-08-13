@@ -104,7 +104,7 @@ def extract_features(model_wrapper, data_manager, subset, batch_size, num_worker
 def main():
     args = get_args()
 
-    # Load model and context")
+    # Load model and context
     print(f"Loading '{args.model_name}' model...")
     model_wrapper = load_model(model_name=args.model_name, model_args=args.model_args)
     data_manager = FeatureDataManager(args.save_dir)
