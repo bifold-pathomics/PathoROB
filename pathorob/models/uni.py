@@ -42,5 +42,12 @@ class UNI2hModelWrapper(ModelWrapper):
         return self.model
 
     def extract(self, data):
-        features = self.model(data)
+        # Concatenate class token and mean of patch tokens
+        features = self.model.forward_features(data)
+        cls_token = features[:, 0, :]
+        if hasattr(self.model, 'num_reg_tokens') and self.model.num_reg_tokens > 0:
+            patch_tokens = features[:, self.model.num_reg_tokens+1:]
+        else:
+            patch_tokens = features[:, 1:, :]
+        features = torch.cat([cls_token, torch.mean(patch_tokens, dim=1)], dim=1)
         return features
