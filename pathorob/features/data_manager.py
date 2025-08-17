@@ -16,7 +16,7 @@ class FeatureDataManager:
         self.chunk_key = chunk_key
 
     def _compute_ids(self, metadata):
-        return metadata[["slide_id", "patch_id"]].agg("-".join, axis=1)
+        return metadata[["slide_id", "patch_id"]].astype(str).agg("-".join, axis=1)
 
     def get_available_datasets(self):
         return sorted([
