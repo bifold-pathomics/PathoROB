@@ -1,35 +1,8 @@
 import numpy as np
-from itertools import combinations
 from sklearn.cluster import KMeans
 from sklearn import metrics
 
 ### DATA PREPARATION ##########################################################
-def get_2x2_combis(bio_options, confounder_options):
-    """
-    Constructs all 2x2 pairings of the biological and confounder labels.
-
-    Parameters
-    ----------
-    bio_options :  bio_label_type list
-        list of all possible biological labels.
-    confounder_options :  confounder_label_type list
-        list of all possible confounder labels.
-
-    Returns
-    -------
-    combis : string set
-        set of all combinations of bio_options and confounder_options as string.
-
-    """
-    combis = set()
-    for bio1, bio2 in combinations(bio_options, r=2):
-        for conf1, conf2 in combinations(confounder_options, r=2):
-            combis.update([f'{bio1}-{conf1}',
-                        f'{bio1}-{conf2}',
-                        f'{bio2}-{conf1}',
-                        f'{bio2}-{conf2}'])
-    return combis
-
 def get_metadata_per_combi(bio_options, confounder_options, full_metadata):
     """
     Finds all entries of the metadata file corresponding to a combination of a 
