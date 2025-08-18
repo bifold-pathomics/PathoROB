@@ -15,7 +15,7 @@ parser = argparse.ArgumentParser()
 # required
 parser.add_argument(
     "--dataset", type=str, required=True,
-    help="PathoROB dataset on which the clustering score is computed. Allowed options: camelyon, tolkach, tcga."
+    help="PathoROB dataset on which the clustering score is computed. Allowed options: camelyon, tolkach_esca, tcga."
 )
 parser.add_argument(
     "--model", type=str, required=True,
@@ -108,7 +108,7 @@ if not(dataset in data_loader.get_available_datasets()):
 # load the metadata corresponding to the dataset
 if dataset=='camelyon':
     metadata_name = 'camelyon_reduced'
-elif dataset=='tolkach':
+elif dataset=='tolkach_esca':
     metadata_name = 'tolkach_esca_reduced'
 elif dataset=='tcga':
     metadata_name = 'tcga_4x4'
