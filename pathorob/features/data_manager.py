@@ -15,7 +15,7 @@ class FeatureDataManager:
         self.metadata_dir = Path(metadata_dir)
         self.chunk_key = chunk_key
 
-    def _compute_ids(self, metadata):
+    def compute_ids(self, metadata):
         return metadata[["slide_id", "patch_id"]].astype(str).agg("-".join, axis=1)
 
     def get_available_datasets(self):
@@ -36,7 +36,7 @@ class FeatureDataManager:
         dataset_dir.mkdir(exist_ok=True, parents=True)
         # Assign unique identifiers to the features
         metadata = metadata.copy()
-        metadata.insert(0, "id", self._compute_ids(metadata))
+        metadata.insert(0, "id", self.compute_ids(metadata))
         # Divide the features into chunks
         for chunk_id in metadata[self.chunk_key].unique():
             # Check for existing features
@@ -57,7 +57,7 @@ class FeatureDataManager:
             raise ValueError(f"Cannot find features for dataset '{dataset}' at: '{dataset_dir}'.")
         # Recover identifiers of the features
         metadata = metadata.copy()
-        metadata.insert(0, "id", self._compute_ids(metadata))
+        metadata.insert(0, "id", self.compute_ids(metadata))
         # Iterate over the chunks of features
         features_dict = {}
         for chunk_id in metadata[self.chunk_key].unique():
