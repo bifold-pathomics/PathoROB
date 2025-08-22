@@ -38,15 +38,14 @@ def get_args():
     #optional parameters
     parser.add_argument('--k_opt_param', type=int, default=-1, help='Currently, k_opt_param should be set to the default value of -1, which ensures results are produced for all values of k. For future use, this parameter can be set to a specific k value to only report the robustness index for the specified value of k. '                                                                    'Fixed k_opt parameter; if -1, the optimal k value will be optimized based on biological class prediction.')
     parser.add_argument('--max_patches_per_combi', type=int, default=-1, help='Maximum patches per combination. -1 for no limit, or a specific number to limit the dataset size.')
-    parser.add_argument('--data_subfolder', type=str, default="default", help='Subfolder specifying a variant of the dataset. The features should be stored in this folder: [embedding_folder]/[data_subfolder].')
-    parser.add_argument('--results_folder_root', type=str, default="results/robustness_index", help='Root folder for results.')
-    parser.add_argument('--fig_folder_root', type=str, default="results/robustness_index/fig", help='Root folder for figures.')
-    parser.add_argument('--embedding_folder', type=str, default="data/features", help='Folder for embeddings. The features should be stored in this folder: [embedding_folder]/[data_subfolder].')
-    parser.add_argument('--meta_folder', type=str, default="data/metadata", help='Folder for metadata.')
+    parser.add_argument('--features_dir', type=str, default="data/features", help='Folder for embeddings. The features should be stored in this folder: [features_dir]/[model]/[dataset].')
+    parser.add_argument('--metadata_dir', type=str, default="data/metadata", help='Folder for metadata.')
+    parser.add_argument('--results_dir', type=str, default="results/robustness_index", help='Root folder for results.')
+    parser.add_argument('--figures_dir', type=str, default="results/robustness_index/fig", help='Root folder for figures.')
     parser.add_argument('--compute_bootstrapped_robustness_index', action='store_true', help='Compute bootstrapped robustness index.')
     parser.add_argument('--num_workers', type=int, default=8, help='Number of workers for parallel processing.')
-    parser.add_argument('--debug_mode', action='store_true', help='Run in debug mode with limited data for faster testing.')
     parser.add_argument('--plot_graphs', type=str2bool, default=True, help='Whether to plot graphs.')
+    parser.add_argument('--debug_mode', action='store_true', help='Run in debug mode with limited data for faster testing.')
 
     return parser.parse_args()
 
@@ -360,6 +359,8 @@ def results_summary(meta, max_patches_per_combi, results_folder, model_k_opt, me
     nr_patches = len(meta)
     result = {}
 
+    print(results)
+
     print(f"results_summary: models in results: {list(results.keys())}")
     models = results.keys()
     if not model_robustness_index:
@@ -479,11 +480,10 @@ def get_median_k_opt_given_dataset(dataset):
 def compute(
         model: str,
         dataset: str,
-        meta_folder: str = "data/metadata",  # TODO rename
-        embedding_folder: str = "data/features",  # TODO rename
-        results_folder_root: str = "results/robustness_index",  # TODO rename
-        fig_folder_root: str = "results/robustness_index/fig",  # TODO rename
-        data_subfolder: str = "default",  # TODO remove; not relevant here
+        features_dir: str = "data/features",
+        metadata_dir: str = "data/metadata",
+        results_dir: str = "results/robustness_index",
+        figures_dir: str = "results/robustness_index/fig",
         k_opt_param: int = -1,
         max_patches_per_combi: int = -1,
         compute_bootstrapped_robustness_index: bool = False,
@@ -500,9 +500,11 @@ def compute(
     # TODO is this the correct logic?
     paired_evaluation = dataset == "tcga"  # default: use paired setup for TCGA, as it has many biological and confounding classes and is not balanced
 
-    options = {"model": model, "max_patches_per_combi": max_patches_per_combi,
-              "k_opt_param": k_opt_param, "data_subfolder": data_subfolder, "dataset": dataset, "results_folder_root": results_folder_root,
-               "fig_folder_root": fig_folder_root, "paired_evaluation": paired_evaluation, "meta_folder": meta_folder}
+    options = {
+        "model": model, "max_patches_per_combi": max_patches_per_combi,
+        "k_opt_param": k_opt_param, "dataset": dataset, "results_dir": results_dir,
+        "figures_dir": figures_dir, "paired_evaluation": paired_evaluation, "metadata_dir": metadata_dir
+    }
 
     print("using these settings:")
     for param in options:
@@ -519,7 +521,7 @@ def compute(
     os.makedirs(results_folder, exist_ok=True)
     os.makedirs(fig_folder, exist_ok=True)
 
-    data_manager = FeatureDataManager(features_dir=embedding_folder, metadata_dir=meta_folder)
+    data_manager = FeatureDataManager(features_dir=features_dir, metadata_dir=metadata_dir)
     meta = get_meta(data_manager, dataset, options["paired_evaluation"])
     meta = reduce_dataset(results_folder, dataset, meta, max_patches_per_combi=max_patches_per_combi)
 

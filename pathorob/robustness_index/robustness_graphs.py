@@ -522,14 +522,14 @@ def plot_10_pareto_plot_avg_all_datasets(datasets, models, options):
         plt.plot(robustness_index_value, bal_acc_value, 'o', color=mcolors[m], label=f"{model} k={k_opt} bal_acc {bal_acc_value:.3f} rob {robustness_index_value:.3f}")
     plt.xlabel("Robustness index")
     plt.ylabel("Balanced accuracy")
-    plt.title(f"Optimal tradeoff of prediction performance vs robustness\naveraged over TCGA-Uniform, Camelyon16 and Tolkach-ESCA, {options['data_subfolder']}")
+    plt.title("Optimal tradeoff of prediction performance vs robustness\naveraged over TCGA-Uniform, Camelyon16 and Tolkach-ESCA.")
     plt.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
     plt.tight_layout()
-    fn = os.path.join(options["fig_folder_root"], f'10-pareto-plot-avg-3-datasets-{options["data_subfolder"]}.png')
+    fn = os.path.join(options["figures_dir"], f'10-pareto-plot-avg-3-datasets.png')
     plt.savefig(fn, dpi=600)
     print(f"saved pareto plot to {fn}")
     df = pd.DataFrame({"model": all_models, "k_opt": opt_k, "bal_acc": bal_accs, "robustness_index": robustness_indices})
-    fn = os.path.join(options["results_folder_root"], f'prediction-accuracy-and-robustness-index-averaged-3-datasets-{options["data_subfolder"]}.csv')
+    fn = os.path.join(options["results_dir"], f'prediction-accuracy-and-robustness-index-averaged-3-datasets.csv')
     df.to_csv(fn, index=False)
     print(f"saved prediction accuracy and robustness index to {fn}")
 
@@ -589,7 +589,7 @@ def plot_10a_pareto_plot_all_datasets(datasets, models, options):
     plt.title(f"Optimal tradeoff of prediction performance vs robustness\naveraged over TCGA-Uniform, Camelyon16 and Tolkach-ESCA")
     plt.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
     plt.tight_layout()
-    fn = os.path.join(options["fig_folder_root"], f'10a-pareto-plot-all-3-datasets.png')
+    fn = os.path.join(options["figures_dir"], f'10a-pareto-plot-all-3-datasets.png')
     plt.savefig(fn, dpi=600)
     print(f"saved pareto plot to {fn}")
 
@@ -618,7 +618,7 @@ def plot_9_optimal_k_all_datasets(datasets, models, options):
     plt.ylabel("Balanced accuracy")
     plt.title(f"Prediction performance against k\naveraged over TCGA-Uniform, Camelyon16 and Tolkach-ESCA")
     plt.tight_layout()
-    fn = os.path.join(options["fig_folder_root"], f'9-optimal-k-avg-3-datasets.png')
+    fn = os.path.join(options["figures_dir"], f'9-optimal-k-avg-3-datasets.png')
     plt.savefig(fn, dpi=600)
     print(f"saved optimal k values to {fn}")
 
@@ -659,7 +659,7 @@ def plot_8_robustness_index_all_datasets(datasets, models, options):
     plt.tight_layout()
     if len(models) > 1:
         median_str = "median-k_opt"
-        fn = os.path.join(fig_folder_root,f'8-robustness-index-all-models-{median_str}-no-dot.png')
+        fn = os.path.join(options["figures_dir"], f'8-robustness-index-all-models-{median_str}-no-dot.png')
         plt.savefig(fn, dpi=600)
         print(f"saved robustness index to {fn}")
 
@@ -672,7 +672,7 @@ def plot_8_robustness_index_all_datasets(datasets, models, options):
             df_dots[model + "-robustness_index"] = robustness_index_k_opt
         plt.legend(bbox_to_anchor=(1.05, 0.5), loc='center left')
         plt.tight_layout()
-        fn = os.path.join(fig_folder_root, f'8-robustness-index-all-models-{median_str}-with-dot.png')
+        fn = os.path.join(options["figures_dir"], f'8-robustness-index-all-models-{median_str}-with-dot.png')
         plt.savefig(fn, dpi=600)
         print(f"saved robustness index to {fn}")
 
@@ -680,11 +680,11 @@ def plot_8_robustness_index_all_datasets(datasets, models, options):
         df_lines = {k: df_lines[k][:min_k_max] for k in df_lines.keys()}
         df_lines = pd.DataFrame(df_lines)
 
-        fn = os.path.join(results_folder_root, f'8-avg-robustness-index-all-datasets-{median_str}.csv')
+        fn = os.path.join(options["results_dir"], f'8-avg-robustness-index-all-datasets-{median_str}.csv')
         df_lines.to_csv(fn, index=False)
         print(f"saved robustness index all models to {fn}")
         df_dots = pd.DataFrame(df_dots, index=[0])
-        fn = os.path.join(results_folder_root, f'8-avg-robustness-index-all-datasets-{median_str}-opt-k.csv')
+        fn = os.path.join(options["results_dir"], f'8-avg-robustness-index-all-datasets-{median_str}-opt-k.csv')
         df_dots.to_csv(fn, index=False)
         print(f"saved robustness index all models dots to {fn}")
 

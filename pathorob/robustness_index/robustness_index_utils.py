@@ -1063,14 +1063,13 @@ def get_k_opt_per_dataset(datasets, models, options):
 
 
 def get_folder_paths(options, dataset):
-    results_folder_root = options["results_folder_root"]
-    fig_folder_root = options["fig_folder_root"]
+    results_dir = options["results_dir"]
+    figures_dir = options["figures_dir"]
     max_patches_per_combi = options["max_patches_per_combi"]
     k_opt_param = options["k_opt_param"]
-    data_subfolder = options["data_subfolder"]
 
-    results_folder = results_folder_root
-    fig_folder = fig_folder_root
+    results_folder = results_dir
+    fig_folder = figures_dir
 
     if options["DBG"]:
         results_folder= os.path.join(results_folder, "debug")
@@ -1084,9 +1083,6 @@ def get_folder_paths(options, dataset):
 
     results_folder = results_folder + f"-{k_opt_param}"
     fig_folder = fig_folder + f"-{k_opt_param}"
-
-    results_folder = results_folder + f"-{data_subfolder}"
-    fig_folder = fig_folder + f"-{data_subfolder}"
 
     print(f"using results_folder: {results_folder}, fig_folder: {fig_folder}")
 
