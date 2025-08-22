@@ -1,4 +1,5 @@
 import os
+
 import numpy as np
 from sklearn.preprocessing import LabelEncoder, Normalizer
 
@@ -88,7 +89,7 @@ def select_optimal_k_value_pairs(dataset, model, patch_names, embeddings, meta, 
     return k_opt, bio_class_prediction_result, total_stats
 
 def evaluate_model_pairs(dataset, data_manager, model, meta, results_folder, fig_folder, num_workers=8, k_opt_param = -1, DBG=False, compute_bootstrapped_robustness_index=False, plot_graphs=True):
-    embeddings = data_manager.load_features(dataset, meta)
+    embeddings = data_manager.load_features(model, dataset, meta)
     print('loaded all embeddings')
 
     print(f"embeddings before normalize shape {embeddings.shape} max {np.max(embeddings)} min {np.min(embeddings)}")
@@ -114,15 +115,11 @@ def evaluate_model_pairs(dataset, data_manager, model, meta, results_folder, fig
 def calc_rob_index_pairs(data_manager, models, dataset, meta, results_folder, fig_folder, num_workers=8, k_opt_param=-1, DBG=False, compute_bootstrapped_robustness_index=False, plot_graphs=True):
     results = {}
     robustness_metrics = {}
-    # TODO make this clean
-    embeddings_folder = data_manager.features_dir
     for m,model in enumerate(models):
         fn = os.path.join(results_folder, f'frequencies-same-class-{model}.pkl')
         if os.path.exists(fn):
             print(f"model {model}: results already exist --> skipping. Found {fn}")
             continue
-        # TODO make this clean
-        data_manager.features_dir = embeddings_folder / model
         bio_class_prediction_results, robustness_metrics[model] = evaluate_model_pairs(dataset, data_manager, model, meta, results_folder, fig_folder, num_workers=num_workers, k_opt_param=k_opt_param, DBG=DBG, compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, plot_graphs=plot_graphs)
         results[model] = bio_class_prediction_results
     return results, robustness_metrics

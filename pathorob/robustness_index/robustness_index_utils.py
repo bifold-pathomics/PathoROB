@@ -9,6 +9,7 @@ from sklearn.metrics import roc_auc_score, balanced_accuracy_score
 from sklearn.neighbors import KNeighborsClassifier
 from scipy.stats import mode
 
+
 def bootstrapped_robustness_index(SO_cum, OS_cum, n_bootstrap = 1000):
     nr_samples = SO_cum.shape[0]
     nr_neighbors = SO_cum.shape[1]  # number of k nearest neighbors

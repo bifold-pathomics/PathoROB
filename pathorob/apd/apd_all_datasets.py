@@ -1,20 +1,25 @@
-import numpy as np
-import scipy
-import json
-import pandas as pd
 import argparse
+import json
+from typing import List
+from pathlib import Path
 
+import numpy as np
+import pandas as pd
 from scipy import stats
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--datasets", nargs="+", required=False, default=['camelyon', 'tcga', 'tolkach_esca'])
-args = parser.parse_args()
-datasets = args.datasets
+from pathorob.features.constants import AVAILABLE_DATASETS
+from pathorob.apd.utils import compute_apd
 
-def compute_scores(accuracies):
-    scores = np.asarray(accuracies)  # Shape: (num_splits, num_repetitions)
-    scores = (scores[1:] / scores[0]).mean(axis=0) - 1
-    return scores
+
+def get_args():
+    parser = argparse.ArgumentParser()
+    # Required arguments
+    parser.add_argument("--model", type=str, required=True)
+    # Optional arguments
+    parser.add_argument("--datasets", nargs="+", default=AVAILABLE_DATASETS)
+    parser.add_argument("--results_dir", type=str, default="results/apd")
+    return parser.parse_args()
+
 
 def compute_corrected_scores(res_df):
     # Correct scores following Masson & Loftus
@@ -27,15 +32,17 @@ def compute_corrected_scores(res_df):
         corrected_scores = res_df_dataset['scores'] + overall_mean - dataset_mean
         res_df.loc[res_df_dataset.index, "corrected_scores"] = corrected_scores
     return res_df
-    
-def load_results(dataset_names):
+
+
+def load_results(results_dir, model, dataset_names):
     # Load accuracies from files and compute scores
+    results_dir = Path(results_dir)
     res_df = pd.DataFrame()
     for dataset in dataset_names:
-        with open('./results/accuracies_' + dataset + '.json', 'r') as file:
+        with open(results_dir / model / f"accuracies_{dataset}.json", 'r') as file:
             results = json.load(file)
-            scores_ID = compute_scores(results['ID_test_accuracies'])
-            scores_OOD = compute_scores(results['OOD_test_accuracies'])
+            scores_ID = compute_apd(results['ID_test_accuracies'])
+            scores_OOD = compute_apd(results['OOD_test_accuracies'])
             res_df = pd.concat([
                 res_df,
                 pd.DataFrame.from_dict({
@@ -51,17 +58,27 @@ def load_results(dataset_names):
             ], ignore_index=True)
     return res_df
 
-# Load accuracies for specified datasets
-res_df = load_results(datasets)
 
-# Compute corrected scores
-id_res_df = compute_corrected_scores(res_df[res_df["domain"] == "ID"])
-ood_res_df = compute_corrected_scores(res_df[res_df["domain"] == "OOD"])
+def compute(
+        model: str,
+        datasets: List[str] = AVAILABLE_DATASETS,
+        results_dir: str = "results/apd",
+):
+    # Load accuracies for specified datasets
+    res_df = load_results(results_dir, model, datasets)
 
-# Get APD with 95% confidence intervals
-stats_ID = id_res_df["corrected_scores"].agg(["mean", "sem"])
-stats_OOD = ood_res_df["corrected_scores"].agg(["mean", "sem"])
-apd_id, ci_id = stats_ID["mean"], stats.t.ppf(0.975, df=len(id_res_df)) * stats_ID["sem"]
-apd_ood, ci_ood = stats_OOD["mean"], stats.t.ppf(0.975, df=len(ood_res_df)) * stats_OOD["sem"]
+    # Compute corrected scores
+    id_res_df = compute_corrected_scores(res_df[res_df["domain"] == "ID"])
+    ood_res_df = compute_corrected_scores(res_df[res_df["domain"] == "OOD"])
 
-print(f"In-domain APD: {np.round(apd_id * 100, 3)}% (confidence interval: +-{np.round(ci_id * 100, 3)}) and out-of-domain APD: {np.round(apd_ood * 100, 3)}% (confidence interval: +-{np.round(ci_ood * 100, 3)}) over datasets: {datasets}")
+    # Get APD with 95% confidence intervals
+    stats_ID = id_res_df["corrected_scores"].agg(["mean", "sem"])
+    stats_OOD = ood_res_df["corrected_scores"].agg(["mean", "sem"])
+    apd_id, ci_id = stats_ID["mean"], stats.t.ppf(0.975, df=len(id_res_df)) * stats_ID["sem"]
+    apd_ood, ci_ood = stats_OOD["mean"], stats.t.ppf(0.975, df=len(ood_res_df)) * stats_OOD["sem"]
+
+    print(f"In-domain APD: {np.round(apd_id * 100, 3)}% (confidence interval: +-{np.round(ci_id * 100, 3)}) and out-of-domain APD: {np.round(apd_ood * 100, 3)}% (confidence interval: +-{np.round(ci_ood * 100, 3)}) over datasets: {datasets}")
+
+
+if __name__ == '__main__':
+    compute(**vars(get_args()))

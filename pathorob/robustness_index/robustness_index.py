@@ -1,20 +1,22 @@
-import glob
 import os
+import glob
 import time
-from sklearn.preprocessing import LabelEncoder, Normalizer
 import argparse
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.preprocessing import LabelEncoder, Normalizer
 
 from pathorob.features.data_manager import FeatureDataManager
+from pathorob.features.constants import AVAILABLE_DATASETS
 import pathorob.robustness_index.robustness_graphs as robustness_graphs
 from pathorob.robustness_index.robustness_index_paired import calc_rob_index_pairs
 from pathorob.robustness_index.robustness_index_utils import aggregate_stats, save_total_stats, \
     get_field_names_given_dataset, evaluate_knn_accuracy, get_k_values, \
     save_balanced_accuracies, evaluate_embeddings, calculate_per_class_prediction_stats, \
     calculate_robustness_index_at_k_opt, get_model_colors, get_folder_paths, plot_results_per_model
+
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -30,15 +32,15 @@ def get_args():
     parser = argparse.ArgumentParser(description='Calculate robustness index for a given dataset and model.')
 
     #required parameters
-    parser.add_argument('--dataset', type=str, help='Dataset name', choices=["camelyon", "tcga", "tolkach_esca"])
     parser.add_argument('--model', type=str, default="all", help='Model name or "all" to process all models')
+    parser.add_argument('--dataset', type=str, help='Dataset name', choices=AVAILABLE_DATASETS)
 
     #optional parameters
     parser.add_argument('--k_opt_param', type=int, default=-1, help='Currently, k_opt_param should be set to the default value of -1, which ensures results are produced for all values of k. For future use, this parameter can be set to a specific k value to only report the robustness index for the specified value of k. '                                                                    'Fixed k_opt parameter; if -1, the optimal k value will be optimized based on biological class prediction.')
     parser.add_argument('--max_patches_per_combi', type=int, default=-1, help='Maximum patches per combination. -1 for no limit, or a specific number to limit the dataset size.')
     parser.add_argument('--data_subfolder', type=str, default="default", help='Subfolder specifying a variant of the dataset. The features should be stored in this folder: [embedding_folder]/[data_subfolder].')
     parser.add_argument('--results_folder_root', type=str, default="results/robustness_index", help='Root folder for results.')
-    parser.add_argument('--fig_folder_root', type=str, default="results/robustness_index/fig/", help='Root folder for figures.')
+    parser.add_argument('--fig_folder_root', type=str, default="results/robustness_index/fig", help='Root folder for figures.')
     parser.add_argument('--embedding_folder', type=str, default="data/features", help='Folder for embeddings. The features should be stored in this folder: [embedding_folder]/[data_subfolder].')
     parser.add_argument('--meta_folder', type=str, default="data/metadata", help='Folder for metadata.')
     parser.add_argument('--compute_bootstrapped_robustness_index', action='store_true', help='Compute bootstrapped robustness index.')
@@ -178,7 +180,7 @@ def select_optimal_k_value(dataset, model, patch_names, embeddings, meta, result
 
 def evaluate_model(
         dataset, data_manager, model, meta, results_folder, fig_folder, num_workers=8, k_opt_param=-1, compute_bootstrapped_robustness_index=False, DBG=False, plot_graphs=True):
-    embeddings = data_manager.load_features(dataset, meta)
+    embeddings = data_manager.load_features(model, dataset, meta)
     print('loaded all embeddings')
 
     print(f"embeddings before normalize shape {embeddings.shape} max {np.max(embeddings)} min {np.min(embeddings)}")
@@ -200,16 +202,12 @@ def evaluate_model(
 def calc_rob_index(data_manager, models, dataset, meta, results_folder, fig_folder, num_workers=8, k_opt_param=-1, compute_bootstrapped_robustness_index=False, DBG=False, plot_graphs=True):
     results = {}
     robustness_metrics_dict = {}
-    # TODO make this clean
-    embeddings_folder = data_manager.features_dir
     for m,model in enumerate(models):
         print(f"processing model {m+1}/{len(models)}: {model}")
         fn = os.path.join(results_folder, f'frequencies-same-class-{model}.pkl')
         if os.path.exists(fn):
             print(f"model {model}: results already exist --> skipping. Found {fn}")
             continue
-        # TODO make this clean
-        data_manager.features_dir = embeddings_folder / model
         bio_class_prediction_results, robustness_metrics_dict[model] = evaluate_model(dataset, data_manager, model, meta, results_folder, fig_folder, num_workers=num_workers, k_opt_param=k_opt_param,  compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, DBG=DBG, plot_graphs=plot_graphs)
         results[model] = bio_class_prediction_results
         robustness_metrics_dict[model] = robustness_metrics_dict
@@ -343,7 +341,7 @@ def report_optimal_k(results_folder, fig_folder, models, options):
     return model_k_opt, model_bal_acc_values, max_bal_acc_value
 
 
-def reduce_dataset(results_folder, meta, max_patches_per_combi):
+def reduce_dataset(results_folder, dataset, meta, max_patches_per_combi):
     np.random.seed(123)  # always use same fixed seed on purpose here for reproducibility
     meta = meta.sample(frac=1).reset_index(drop=True)
     meta["bio_conf_combi"] = meta["biological_class"] + "-" + meta["medical_center"]
@@ -478,20 +476,23 @@ def get_median_k_opt_given_dataset(dataset):
     return int(median_k_opt)
 
 
-def compute(args):
-    """
-    Compute the robustness index for the given dataset and model.
+def compute(
+        model: str,
+        dataset: str,
+        meta_folder: str = "data/metadata",  # TODO rename
+        embedding_folder: str = "data/features",  # TODO rename
+        results_folder_root: str = "results/robustness_index",  # TODO rename
+        fig_folder_root: str = "results/robustness_index/fig",  # TODO rename
+        data_subfolder: str = "default",  # TODO remove; not relevant here
+        k_opt_param: int = -1,
+        max_patches_per_combi: int = -1,
+        compute_bootstrapped_robustness_index: bool = False,
+        num_workers: int = 8,
+        plot_graphs: bool = True,
+        debug_mode: bool = False,
+):
+    t_start = time.time()
 
-    Parameters
-    ----------
-    args
-
-    Returns
-    -------
-
-    """
-
-    model = args.model
     if model != "all":
         print(f"processing model {model}")
         models = [model]
@@ -507,7 +508,7 @@ def compute(args):
     for param in options:
         print(f"param {param}: {options[param]}")
 
-    DBG=args.debug_mode
+    DBG=debug_mode
     options["DBG"] = DBG
     results_folder, fig_folder = get_folder_paths(options, dataset)
 
@@ -520,7 +521,7 @@ def compute(args):
 
     data_manager = FeatureDataManager(features_dir=embedding_folder, metadata_dir=meta_folder)
     meta = get_meta(data_manager, dataset, options["paired_evaluation"])
-    meta = reduce_dataset(results_folder, meta, max_patches_per_combi=max_patches_per_combi)
+    meta = reduce_dataset(results_folder, dataset, meta, max_patches_per_combi=max_patches_per_combi)
 
     if options["paired_evaluation"]: #calculate robustness index for pairs of 2 bio classes and 2 confounding classes
         robustness_metrics_dict, results = calc_rob_index_pairs(data_manager, models, dataset, meta, results_folder, fig_folder, num_workers=num_workers, k_opt_param=k_opt_param, DBG=DBG, compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, plot_graphs=plot_graphs)
@@ -576,21 +577,4 @@ def compute(args):
 
 
 if __name__ == '__main__':
-    t_start = time.time()
-    args = get_args()
-
-    results_folder_root = args.results_folder_root
-    fig_folder_root = args.fig_folder_root
-    embedding_folder = args.embedding_folder
-    meta_folder = args.meta_folder
-    dataset = args.dataset
-    max_patches_per_combi = int(args.max_patches_per_combi)
-    k_opt_param = int(args.k_opt_param) #supply fixed k_opt; prediction runs to optimize k_opt based on biological class prediction bal_acc will be skipped
-    data_subfolder = args.data_subfolder
-    compute_bootstrapped_robustness_index = args.compute_bootstrapped_robustness_index
-    num_workers=args.num_workers
-    plot_graphs=args.plot_graphs
-
-    robustness_metrics = compute(args)
-
-    print("done")
+    compute(**vars(get_args()))

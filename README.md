@@ -27,15 +27,50 @@ Additional requirements for PathoROB repository:
 
 ## 2) Feature Extraction
 
-How to run feature extraction:
-
 ```
 python3 -m pathorob.features.extract_features \
---model_name uni2-h \
+--model uni2h_clsmean \
 --model_args '{"hf_token": "<TOKEN>"}'
 ```
 
-For further user arguments, see `pathorob/features/extract_features.py`.
+- Results: `data/features/uni2h_clsmean`
+- Further arguments: `pathorob/features/extract_features.py`
+
+## 3) Benchmark: Quickstart
+
+### (a) Robustness index
+
+```
+python3 -m pathorob.robustness_index.robustness_index \
+--model uni2h_clsmean \
+--dataset { camelyon OR tcga OR tolkach_esca }
+```
+
+- Results: `results/robustness_index`
+- Further arguments: `pathorob/robustness_index/robustness_index.py`
+
+### (b) Average performance drop (APD)
+
+```
+python3 -m pathorob.apd.apd_per_dataset \
+--model uni2h_clsmean \
+--dataset { camelyon OR tcga OR tolkach_esca }
+```
+
+- Results: `results/apd`
+- Further arguments: `pathorob/apd/apd_per_dataset.py`
+
+### (c) Clustering score
+
+```
+python3 -m pathorob.clustering_score.analysis_clustering \
+--model uni2h_clsmean \
+--dataset { camelyon OR tcga OR tolkach_esca }
+```
+
+- Results: `results/clustering_score`
+- Further arguments: `pathorob/clustering_score/analysis_clustering.py`
+
 
 ## 4) Clustering Analysis
 
@@ -43,9 +78,9 @@ For further user arguments, see `pathorob/features/extract_features.py`.
 
 To evaluate the clustering performance, navigate to directory `PathoROB/pathorob/clustering_score/` and run the following script:
 
-```python ANALYSIS_clustering.py --model <your FM> --dataset <your dataset>```
+```python analysis_clustering.py --model <your FM> --dataset <your dataset>```
 
-where `<your dataset>` must match one of PathoROB’s datasets, i.e., `camelyon`, `tolkach_esca`, or `tcga`. `<your FM>`is the name of the foundation model for which the clustering score will be evaluated. This name must match the name of the folder in `feature_dir` that holds the feature representations of this foundation model. `ANALYSIS_clustering.py` also provides other optional arguments that let you further modify your experiments. Please see `python ANALYSIS_clustering.py --help` for more information.
+where `<your dataset>` must match one of PathoROB’s datasets, i.e., `camelyon`, `tolkach_esca`, or `tcga`. `<your FM>`is the name of the foundation model for which the clustering score will be evaluated. This name must match the name of the folder in `feature_dir` that holds the feature representations of this foundation model. `analysis_clustering.py` also provides other optional arguments that let you further modify your experiments. Please see `python analysis_clustering.py --help` for more information.
 
 In its default version, this script first selects the number of clusters by maximizing the silhouette score, then performs clustering 50 times, and finally calculates the average clustering score and its standard deviation. The results are printed to the standard output. Additionally, the results are saved in the following CSV files:
 * `<2xbiological_class-2xmedical_center-combination>_SilhouetteScores.csv` (shape: `[2, 29]`):

@@ -1,6 +1,6 @@
+import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import balanced_accuracy_score
-import numpy as np
 
 
 def fit_and_evaluate(args):
