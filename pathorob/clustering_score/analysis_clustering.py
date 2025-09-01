@@ -119,6 +119,9 @@ def compute(
     else:
         raise ValueError(f"For dataset {dataset} no metadata known.")
     metadata = data_loader.load_metadata(metadata_name)
+    # Exclude OOD data if present in the metadata frame
+    # TODO determine if this is needed or not
+    # metadata = metadata[~(metadata["subset"] == "OOD")].reset_index(drop=True)
 
     # get the possible options of the bio and mc labels
     bio_options   = metadata['biological_class'].unique()
