@@ -5,10 +5,12 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from pathorob.robustness_index.robustness_index_utils import aggregate_per_combi, calculate_robustness_index_at_k_opt, \
-    get_robustness_index_k_range, get_optimal_prediction_results_avg_all_datasets, \
-    get_optimal_prediction_results_per_dataset, get_robustness_results_median_k_opt_per_dataset, \
-    get_robustness_results_all_datasets, get_robustness_results_per_dataset, get_model_colors
+from pathorob.robustness_index.robustness_index_utils import (
+    aggregate_per_combi, calculate_robustness_index_at_k_opt, get_robustness_index_k_range,
+    get_optimal_prediction_results_avg_all_datasets, get_optimal_prediction_results_per_dataset,
+    get_robustness_results_median_k_opt_per_dataset, get_robustness_results_all_datasets,
+    get_robustness_results_per_dataset, get_model_colors
+)
 
 
 def plot_results(model, results_folder, fig_folder, model_k_opt):

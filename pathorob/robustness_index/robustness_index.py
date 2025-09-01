@@ -12,10 +12,11 @@ from pathorob.features.data_manager import FeatureDataManager
 from pathorob.features.constants import AVAILABLE_DATASETS
 import pathorob.robustness_index.robustness_graphs as robustness_graphs
 from pathorob.robustness_index.robustness_index_paired import calc_rob_index_pairs
-from pathorob.robustness_index.robustness_index_utils import aggregate_stats, save_total_stats, \
-    get_field_names_given_dataset, evaluate_knn_accuracy, get_k_values, \
-    save_balanced_accuracies, evaluate_embeddings, calculate_per_class_prediction_stats, \
+from pathorob.robustness_index.robustness_index_utils import (
+    aggregate_stats, save_total_stats, get_field_names_given_dataset, evaluate_knn_accuracy, get_k_values,
+    save_balanced_accuracies, evaluate_embeddings, calculate_per_class_prediction_stats,
     calculate_robustness_index_at_k_opt, get_model_colors, get_folder_paths, plot_results_per_model
+)
 
 
 def str2bool(v):
@@ -28,6 +29,7 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
+
 def get_args():
     parser = argparse.ArgumentParser(description='Calculate robustness index for a given dataset and model.')
 
@@ -36,12 +38,13 @@ def get_args():
     parser.add_argument('--dataset', type=str, help='Dataset name', choices=AVAILABLE_DATASETS)
 
     #optional parameters
-    parser.add_argument('--k_opt_param', type=int, default=-1, help='Currently, k_opt_param should be set to the default value of -1, which ensures results are produced for all values of k. For future use, this parameter can be set to a specific k value to only report the robustness index for the specified value of k. '                                                                    'Fixed k_opt parameter; if -1, the optimal k value will be optimized based on biological class prediction.')
-    parser.add_argument('--max_patches_per_combi', type=int, default=-1, help='Maximum patches per combination. -1 for no limit, or a specific number to limit the dataset size.')
     parser.add_argument('--features_dir', type=str, default="data/features", help='Folder for embeddings. The features should be stored in this folder: [features_dir]/[model]/[dataset].')
     parser.add_argument('--metadata_dir', type=str, default="data/metadata", help='Folder for metadata.')
     parser.add_argument('--results_dir', type=str, default="results/robustness_index", help='Root folder for results.')
     parser.add_argument('--figures_dir', type=str, default="results/robustness_index/fig", help='Root folder for figures.')
+    parser.add_argument('--paired_evaluation', type=str2bool, default=None, help='Whether to use paired evaluation. Per default (None), this is True for tcga and False for the other datasets.')
+    parser.add_argument('--k_opt_param', type=int, default=-1, help='Currently, k_opt_param should be set to the default value of -1, which ensures results are produced for all values of k. For future use, this parameter can be set to a specific k value to only report the robustness index for the specified value of k. '                                                                    'Fixed k_opt parameter; if -1, the optimal k value will be optimized based on biological class prediction.')
+    parser.add_argument('--max_patches_per_combi', type=int, default=-1, help='Maximum patches per combination. -1 for no limit, or a specific number to limit the dataset size.')
     parser.add_argument('--compute_bootstrapped_robustness_index', action='store_true', help='Compute bootstrapped robustness index.')
     parser.add_argument('--num_workers', type=int, default=8, help='Number of workers for parallel processing.')
     parser.add_argument('--plot_graphs', type=str2bool, default=True, help='Whether to plot graphs.')
@@ -78,7 +81,7 @@ def select_optimal_k_value(dataset, model, patch_names, embeddings, meta, result
 
     max_samples_per_group = int(np.max(meta["slide_id"].value_counts().values))
 
-    k_values = get_k_values(dataset, opt_k, max_samples_per_group)
+    k_values = get_k_values(dataset, False, opt_k, max_samples_per_group)
 
     bio_values = meta[biological_class_field].values
     bio_classes = np.unique(bio_values)
@@ -169,7 +172,7 @@ def select_optimal_k_value(dataset, model, patch_names, embeddings, meta, result
 
     k_values = np.array([k for k in k_values if k <= max_k])
     k_opt, bal_acc_at_k_opt, bio_class_prediction_result = save_balanced_accuracies(model, accuracies_bio, k_values, results_folder)
-    save_total_stats(total_stats, meta, dataset, model, results_folder, k_opt, bal_acc_at_k_opt)
+    total_stats = save_total_stats(total_stats, meta, dataset, model, results_folder, k_opt, bal_acc_at_k_opt)
     calculate_per_class_prediction_stats(biological_class_field, confounding_class_field, bio_classes, model, meta, aucs_per_class_list, k_opt, results_folder)
     if plot_graphs:
         plot_results_per_model(meta, total_stats, accuracies_bio, k_values, model, results_folder, fig_folder, dataset,
@@ -192,8 +195,11 @@ def evaluate_model(
     print(f"len meta {len(meta)} patch_names {len(patch_names)} emb {len(embeddings)}")
     print("len index before ",len(meta.index),"unique",len(np.unique(meta.index)))
 
-    k_opt, bio_class_prediction_results, robustness_metrics_dict = select_optimal_k_value(dataset, model, patch_names, embeddings, meta, results_folder, fig_folder,
-                                                                 num_workers = num_workers, compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, opt_k=k_opt_param, plot_graphs=plot_graphs)
+    k_opt, bio_class_prediction_results, robustness_metrics_dict = select_optimal_k_value(
+        dataset, model, patch_names, embeddings, meta, results_folder, fig_folder,
+        num_workers=num_workers, compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index,
+        opt_k=k_opt_param, plot_graphs=plot_graphs
+    )
     print(f"found k_opt {k_opt}")
     return bio_class_prediction_results, robustness_metrics_dict
 
@@ -207,32 +213,34 @@ def calc_rob_index(data_manager, models, dataset, meta, results_folder, fig_fold
         if os.path.exists(fn):
             print(f"model {model}: results already exist --> skipping. Found {fn}")
             continue
-        bio_class_prediction_results, robustness_metrics_dict[model] = evaluate_model(dataset, data_manager, model, meta, results_folder, fig_folder, num_workers=num_workers, k_opt_param=k_opt_param,  compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, DBG=DBG, plot_graphs=plot_graphs)
+        bio_class_prediction_results, robustness_metrics = evaluate_model(dataset, data_manager, model, meta, results_folder, fig_folder, num_workers=num_workers, k_opt_param=k_opt_param,  compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, DBG=DBG, plot_graphs=plot_graphs)
         results[model] = bio_class_prediction_results
-        robustness_metrics_dict[model] = robustness_metrics_dict
+        robustness_metrics_dict[model] = robustness_metrics
     return results, robustness_metrics_dict
 
 
-def get_meta(data_manager, dataset, paired_evaluation=True):
-    if dataset == "camelyon":
-        if paired_evaluation:
-            metadata_name = "camelyon_reduced"
-        else:
-            metadata_name = "camelyon"
-    elif dataset == "tcga":
+def get_meta(data_manager, dataset, paired_evaluation):
+    if dataset == "tcga":
         if paired_evaluation:
             metadata_name = "tcga_2x2"
         else:
             metadata_name = "tcga_4x4"
+    elif dataset == "camelyon":
+        if paired_evaluation:
+            raise ValueError(f"Paired evaluation not implemented for dataset: {dataset}")
+        else:
+            metadata_name = "camelyon"
     elif dataset == "tolkach_esca":
         if paired_evaluation:
-            metadata_name = "tolkach_esca_reduced"
+            raise ValueError(f"Paired evaluation not implemented for dataset: {dataset}")
         else:
-            metadata_name = "tolkach_esca"
+            metadata_name = "tolkach_esca_reduced"
     else:
         raise ValueError(f"Unknown dataset: {dataset}")
     meta = data_manager.load_metadata(metadata_name)
     meta.insert(0, "patch_name", data_manager.compute_ids(meta))
+    # Exclude OOD data if present in the metadata frame
+    meta = meta[~(meta["subset"] == "OOD")].reset_index(drop=True)
     return meta
 
 
@@ -346,8 +354,7 @@ def reduce_dataset(results_folder, dataset, meta, max_patches_per_combi):
     meta["bio_conf_combi"] = meta["biological_class"] + "-" + meta["medical_center"]
     if max_patches_per_combi > 0:
         nr_org = len(meta)
-        grouping_columns = ["subset", "bio_conf_combi"]
-        meta = meta.groupby(grouping_columns).head(max_patches_per_combi).reset_index(drop=True)
+        meta = meta.groupby(["subset", "bio_conf_combi"]).head(max_patches_per_combi).reset_index(drop=True)
         print(f"reduced dataset to {max_patches_per_combi} patches per combination from {nr_org} to {len(meta)}")
     fn = os.path.join(results_folder, f'meta-reduced-{dataset}.csv')
     meta.to_csv(fn, index=False)
@@ -386,7 +393,6 @@ def results_summary(meta, max_patches_per_combi, results_folder, model_k_opt, me
                 f"robustness index {robustness_index:.3f}"
                 f" runtime {dt:.2f} sec, {dt / 60.0:.2f} min")
         else:
-            print(results[model])
             model_bal_acc = results[model]["bal_acc_at_k_opt"]
             if model_bal_acc_values:
                 bal_acc = np.max(model_bal_acc_values[model].bal_acc.values)
@@ -484,6 +490,7 @@ def compute(
         metadata_dir: str = "data/metadata",
         results_dir: str = "results/robustness_index",
         figures_dir: str = "results/robustness_index/fig",
+        paired_evaluation: bool = None,
         k_opt_param: int = -1,
         max_patches_per_combi: int = -1,
         compute_bootstrapped_robustness_index: bool = False,
@@ -497,8 +504,9 @@ def compute(
         print(f"processing model {model}")
         models = [model]
 
-    # TODO is this the correct logic?
-    paired_evaluation = dataset == "tcga"  # default: use paired setup for TCGA, as it has many biological and confounding classes and is not balanced
+    if paired_evaluation is None:
+        # default: use paired setup for TCGA, as it has many biological and confounding classes and is not balanced
+        paired_evaluation = dataset == "tcga"
 
     options = {
         "model": model, "max_patches_per_combi": max_patches_per_combi,
@@ -533,11 +541,7 @@ def compute(
     if k_opt_param == -1:
         if plot_graphs:
             model_k_opt, model_bal_acc_values, max_bal_acc_value = report_optimal_k(results_folder, fig_folder, models, options)
-        recompute_median_k_opt = False
-        if recompute_median_k_opt:
-            median_k_opt = int(np.median(list(model_k_opt.values())))
-        else:
-            median_k_opt = get_median_k_opt_given_dataset(dataset)
+        median_k_opt = get_median_k_opt_given_dataset(dataset)
         print(f"dataset {dataset} found model k_opt {model_k_opt}  median k_opt: {median_k_opt:.2f}")
     else: #fixed k_opt_param
         print(f"using fixed k_opt_param {k_opt_param} for all models")

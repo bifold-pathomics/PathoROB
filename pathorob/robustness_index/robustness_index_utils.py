@@ -477,13 +477,13 @@ def evaluate_knn_accuracy(meta, dataset, X_train, X_test, y_train, y_test, n_nei
     return balanced_accuracy, auc_per_class, knn_distances, knn_indices, effective_n_neighbors
 
 
-def get_k_values(dataset, opt_k=None, max_samples_per_group=0):
+def get_k_values(dataset, paired_evaluation, opt_k=None, max_samples_per_group=0):
     if opt_k and opt_k > 0:
         margin = max_samples_per_group
         k_values = np.array([opt_k + margin])
         return k_values
     else:
-        max_k = get_max_k(dataset)
+        max_k = get_max_k(dataset, paired_evaluation)
         k_values = np.array([1, 3, 5, 7, 9] + list(np.arange(11, max_k, 10)))
         return k_values
 
@@ -497,21 +497,14 @@ def calculate_avg_frequency_same_classes(df_embeddings_with_meta: pd.DataFrame,
     avg_freq_same_class = float(np.mean(freq_same_class[min_neighbor_index:max_neighbor_index]))
     return freq_same_class, avg_freq_same_class, k_values
 
-def get_max_k(dataset):
-    #  TODO how to make this compatible?
-    if dataset in ["tcga-uniform-subset",]:
-        max_k = 1200
-    elif dataset in ["camelyon16", "tcga-2k", "tcga-4x4",]:
+def get_max_k(dataset, paired_evaluation):
+    if dataset in ["camelyon"]:
         max_k = 600
-    elif dataset in [ "tolkach-esca"]:
-        max_k = 1000
-    elif dataset == "camelyon17": #k limited by dataset size
-        max_k = 111
-    # TODO new version
     elif dataset in ["tcga"]:
-        max_k = 1200
-    elif dataset in ["camelyon"]:
-        max_k = 600
+        if paired_evaluation:
+            max_k = 1200
+        else:
+            max_k = 600
     elif dataset in ["tolkach_esca"]:
         max_k = 1000
     else:
@@ -602,6 +595,7 @@ def save_total_stats(stats, meta, dataset, model, results_folder, k_opt, bal_acc
     df = pd.DataFrame(df_dict, index=[0])
     df.to_csv(fn, index=False)
     print(f'saved results summary to {fn}')
+    return stats
 
 def plot_3a_optimal_k_per_model(model, k_values_sel, bal_accs, k_opt, fig_folder):
     plt.plot(k_values_sel, bal_accs)
@@ -834,7 +828,7 @@ def calculate_robustness_index_at_k_opt(models, results_folder, k_opt):
         if np.isnan(rob_index_at_k_opt[model]):
             rob_index_str = "NaN"
         else:
-            rob_index_str = f"{rob_index_at_k_opt[model]:.2f}"
+            rob_index_str = f"{rob_index_at_k_opt[model]:.3f}"
         print(f"model {model} k_opt_bio {k_opt_bio_pred_model} robustness index {rob_index_str} ")
 
     return k_opt_bio_pred_model, rob_index_at_k_opt
