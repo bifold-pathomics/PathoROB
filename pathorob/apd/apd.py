@@ -4,19 +4,21 @@ import random
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
+from scipy import stats
 from tqdm import trange
 
 from pathorob.features.constants import AVAILABLE_DATASETS
 from pathorob.apd.train_model import train_logistic_regression
-from pathorob.apd.utils import load_data, get_patches_map_to_split, compute_apd
+from pathorob.apd.utils import load_data, get_patches_map_to_split, compute_apd, compute_corrected_scores, load_results
 
 
 def get_args():
     parser = argparse.ArgumentParser()
     # Required arguments
     parser.add_argument("--model", type=str, required=True)
-    parser.add_argument("--dataset", type=str, required=True, choices=AVAILABLE_DATASETS)
     # Optional arguments
+    parser.add_argument("--datasets", nargs="+", default=AVAILABLE_DATASETS)
     parser.add_argument("--features_dir", type=str, default="data/features")
     parser.add_argument("--metadata_dir", type=str, default="data/metadata")
     parser.add_argument("--results_dir", type=str, default="results/apd")
@@ -32,19 +34,19 @@ def compute(
         results_dir: str = "results/apd",
         iterations: int = 20,
 ):
-    output_file = Path(results_dir) / model / f"accuracies_{dataset}.json"
+    output_file = Path(results_dir) / model / dataset
 
     random.seed(1000)
 
     print(f"Model: {model}")
     print(f"Dataset: {dataset}")
-    print(f"Output file: {output_file}")
+    print(f"Output files: {str(output_file) + '_summary.json'}, {str(output_file) + '_raw.json'}")
     print(f"Training iterations: {iterations}\n")
 
     print("Load features and metadata ...")
 
     # Load features and metadata
-    medical_centers, biological_classes, features, data_test_ood, num_splits, num_slides_per_category, num_patches_per_slide, tolkach_splits = load_data(model, dataset, features_dir, metadata_dir)
+    medical_centers, biological_classes, features, data_test_ood, num_splits, num_slides_per_category, num_patches_per_slide, feasible_splits = load_data(model, dataset, features_dir, metadata_dir)
 
     seeds = random.sample(range(0, 10000), iterations)
     results = {'ID_test_accuracies': [], 'ID_test_accuracy_means': [], 'OOD_test_accuracies': [], 'OOD_test_accuracy_means': []}
@@ -54,11 +56,11 @@ def compute(
         random.seed(seed)
 
         # For each data resampling repetition, shuffle cases/slides in each features[medical_center][bio_class] list
-        if dataset == "tolkach_esca": random_train_test_split = random.randint(0, len(tolkach_splits['train'][medical_centers[0]]) - 1), random.randint(0, len(tolkach_splits['train'][medical_centers[1]]) - 1)
+        if dataset == "tolkach_esca": random_train_test_split = random.randint(0, len(feasible_splits['train'][medical_centers[0]]) - 1), random.randint(0, len(feasible_splits['train'][medical_centers[1]]) - 1)
         for i, center in enumerate(medical_centers):
             if dataset == "tolkach_esca":
-                train_cases = tolkach_splits['train'][center][random_train_test_split[i]]
-                test_cases = tolkach_splits['test'][center][random_train_test_split[i]]
+                train_cases = feasible_splits['train'][center][random_train_test_split[i]]
+                test_cases = feasible_splits['test'][center][random_train_test_split[i]]
             for j in range(len(biological_classes)):
                 dataChunkedBySlides = [features[i][j][k:k + num_patches_per_slide] for k in range(0, len(features[i][j]), num_patches_per_slide)]
                 random.shuffle(dataChunkedBySlides)
@@ -70,7 +72,7 @@ def compute(
 
         for split in trange(num_splits, desc=f"Training repetition {idx + 1}/{len(seeds)}", leave=True):
             # Train LR model for each split and store the accuracies
-
+            
             # First, construct training set, validation set, and test sets
             split_map, max_train_slides = get_patches_map_to_split(dataset, split, num_patches_per_slide)
 
@@ -105,18 +107,47 @@ def compute(
     results['OOD_test_accuracy_means'] = [np.mean(lst) for lst in ood_test_accuracies]
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_file, 'w') as file:
-        json.dump(results, file, indent=4)
+    with open(str(output_file) + '_raw.json', 'w') as file:
+        json.dump({k: v for k, v in results.items() if "means" not in k}, file, indent=4)
 
     print(f"\nID accuracy means on {dataset} for each split: {results['ID_test_accuracy_means']}")
     print(f"OOD accuracy means on {dataset} for each split: {results['OOD_test_accuracy_means']}")
 
     # Compute APD for given dataset
-    apd_id = np.mean(compute_apd(results['ID_test_accuracies']))
-    apd_ood = np.mean(compute_apd(results['OOD_test_accuracies']))
+    apds = {'apd_id': np.mean(compute_apd(results['ID_test_accuracies'])), 'apd_ood': np.mean(compute_apd(results['OOD_test_accuracies']))}
 
-    print(f"\nIn-domain APD: {np.round(apd_id * 100, 3)}% and out-of-domain APD: {np.round(apd_ood * 100, 3)}% for model '{model}' on '{dataset}'.")
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(str(output_file) + '_summary.json', 'w') as file:
+        json.dump(apds | {k: v for k, v in results.items() if "means" in k}, file, indent=4)
+
+    print(f"\nIn-domain APD: {np.round(apds['apd_id'] * 100, 3)}% and out-of-domain APD: {np.round(apds['apd_ood'] * 100, 3)}% for model '{model}' on '{dataset}'.")
 
 
 if __name__ == '__main__':
-    compute(**vars(get_args()))
+    arguments = vars(get_args())
+    print(f"Start APD calculation for model: {arguments['model']} on datasets: {arguments['datasets']}\n")
+    for dataset in arguments['datasets']:
+        args = {**arguments, "dataset": dataset}
+        args.pop("datasets")
+        compute(**args)
+    
+    print(f"\nCompute APD over all specified datasets: {arguments['datasets']}")
+    res_df = load_results(arguments['results_dir'], arguments['model'], arguments['datasets'])
+
+    # Compute corrected scores
+    id_res_df = compute_corrected_scores(res_df[res_df["domain"] == "ID"])
+    ood_res_df = compute_corrected_scores(res_df[res_df["domain"] == "OOD"])
+
+    # Get APD with 95% confidence intervals
+    stats_ID = id_res_df["corrected_scores"].agg(["mean", "sem"])
+    stats_OOD = ood_res_df["corrected_scores"].agg(["mean", "sem"])
+    apd_id, ci_id = stats_ID["mean"], stats.t.ppf(0.975, df=len(id_res_df)) * stats_ID["sem"]
+    apd_ood, ci_ood = stats_OOD["mean"], stats.t.ppf(0.975, df=len(ood_res_df)) * stats_OOD["sem"]
+
+    apds_all_datasets = {'apd_id': apd_id, 'ci_id': ci_id, 'apd_ood': apd_ood, 'ci_ood': ci_ood}
+
+    (Path(arguments['results_dir']) / arguments['model']).mkdir(parents=True, exist_ok=True)
+    with open(Path(arguments['results_dir']) / arguments['model'] / 'aggregated_summary.json', 'w') as file:
+        json.dump(apds_all_datasets, file, indent=4)
+    
+    print(f"In-domain APD: {np.round(apd_id * 100, 3)}% (confidence interval: +-{np.round(ci_id * 100, 3)}) and out-of-domain APD: {np.round(apd_ood * 100, 3)}% (confidence interval: +-{np.round(ci_ood * 100, 3)})")
