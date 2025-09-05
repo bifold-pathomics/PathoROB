@@ -18,7 +18,7 @@ def get_args():
     # Required arguments
     parser.add_argument("--model", type=str, required=True)
     # Optional arguments
-    parser.add_argument("--datasets", nargs="+", default=AVAILABLE_DATASETS)
+    parser.add_argument("--datasets", type=str, nargs="+", default=AVAILABLE_DATASETS)
     parser.add_argument("--features_dir", type=str, default="data/features")
     parser.add_argument("--metadata_dir", type=str, default="data/metadata")
     parser.add_argument("--results_dir", type=str, default="results/apd")

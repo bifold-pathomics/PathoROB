@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn import metrics
+from tqdm import tqdm
 
 
 ### DATA PREPARATION ##########################################################
@@ -64,7 +65,7 @@ def compute_silhouette_score_K(X, Ks, metric, rnd_state):
 
     """
     SS = np.zeros(len(Ks))
-    for i,k in enumerate(Ks):
+    for i,k in tqdm(enumerate(Ks), total=len(Ks)):
         kmeans = KMeans(n_clusters=k, random_state=rnd_state, init="random", n_init=20).fit(X)
         cluster_labels = kmeans.labels_
         SS[i] = metrics.silhouette_score(X, cluster_labels, metric=metric)

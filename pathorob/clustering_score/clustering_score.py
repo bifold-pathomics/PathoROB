@@ -1,11 +1,13 @@
-import os
 import argparse
 import random
-from itertools import combinations
+import json
+from itertools import combinations, product
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 from sklearn.cluster import KMeans
+from tqdm import tqdm
 
 from pathorob.features.data_manager import FeatureDataManager
 from pathorob.features.constants import AVAILABLE_DATASETS
@@ -22,8 +24,8 @@ def get_args():
         help="Name of foundation model (name of folder in feature_dir that holds the features of the model)."
     )
     parser.add_argument(
-        "--dataset", type=str, required=True, choices=AVAILABLE_DATASETS,
-        help=f"PathoROB dataset on which the clustering score is computed. Available datasets: {AVAILABLE_DATASETS}."
+        "--datasets", type=str, nargs="+", default=AVAILABLE_DATASETS,
+        help=f"PathoROB datasets on which the clustering score is computed. Available datasets: {AVAILABLE_DATASETS}."
     )
     # optional
     parser.add_argument(
@@ -58,10 +60,6 @@ def get_args():
         "--num_trials", type=int, default=50,
         help="Optional. Number of repetitions to run the clustering (for calculating the average clustering score). Default: 50."
     )
-    parser.add_argument(
-        "--reset_K", type=bool, default=False,
-        help="Optional. Forces to find optimal number of clusters again, even though there might be saved results. Default: False."
-    )
     return parser.parse_args()
 
 
@@ -76,7 +74,6 @@ def compute(
         maxK: int = 30,
         metric: str = "cosine",
         num_trials: int = 50,
-        reset_K: bool = False,
 ):
     ### CHECK ARGUMENTS FROM COMMAND LINE #########################################
     if (K is not None) and K<2:
@@ -120,8 +117,7 @@ def compute(
         raise ValueError(f"For dataset {dataset} no metadata known.")
     metadata = data_loader.load_metadata(metadata_name)
     # Exclude OOD data if present in the metadata frame
-    # TODO determine if this is needed or not
-    # metadata = metadata[~(metadata["subset"] == "OOD")].reset_index(drop=True)
+    metadata = metadata[~(metadata["subset"] == "OOD")].reset_index(drop=True)
 
     # get the possible options of the bio and mc labels
     bio_options   = metadata['biological_class'].unique()
@@ -130,85 +126,101 @@ def compute(
     combis, metadata_per_combi = get_metadata_per_combi(bio_options, mc_options, metadata)
     ###############################################################################
 
-    print(f"Clustering score evaluation for model '{model}' on dataset '{dataset}'", flush=True)
     random.seed(1000)
     # go over all possible combinations of two bio classes x two mc classes
     # which then forms the data for one individual experiment
-    for bio1, bio2 in combinations(bio_options, r=2):
-        for mc1, mc2 in combinations(mc_options, r=2):
-            cc_str = f'{bio1}-{bio2}-{mc1}-{mc2}'
-            current_combis = [f'{bio1}-{mc1}',
-                              f'{bio1}-{mc2}',
-                              f'{bio2}-{mc1}',
-                              f'{bio2}-{mc2}']
-            # check whether each of these combinations exist in metadata
-            if not(all([(cc in combis) for cc in current_combis])):
-                print(f'Warning: {current_combis} not found in metadata. Skip.', flush=True)
-                continue
-            ### LOAD DATA #########################################################
-            print(cc_str, flush=True)
-            Z = []
-            bio_labels = []
-            mc_labels = []
-            for cc in current_combis:
-                loaded_data = data_loader.load_features(model, dataset, metadata_per_combi[cc])
-                Z.extend(loaded_data)
-                bio_labels.extend(metadata_per_combi[cc]['biological_class'].to_list())
-                mc_labels.extend( metadata_per_combi[cc]['medical_center'  ].to_list())
-            # convert to array so that it is easier to handle
-            Z          = np.array(Z)
-            bio_labels = np.array(bio_labels)
-            mc_labels  = np.array(mc_labels)
+    all_combinations = list(product(combinations(bio_options, r=2), combinations(mc_options, r=2)))
+    all_silhouette_scores, all_aris = pd.DataFrame(), pd.DataFrame()
+    print(f"Clustering score evaluation for model '{model}' on dataset '{dataset}' "
+          f"for {len(all_combinations)} class combinations.", flush=True)
+    for (bio1, bio2), (mc1, mc2) in tqdm(all_combinations):
+        cc_str = f'{bio1}-{bio2}-{mc1}-{mc2}'
+        current_combis = [f'{bio1}-{mc1}',
+                          f'{bio1}-{mc2}',
+                          f'{bio2}-{mc1}',
+                          f'{bio2}-{mc2}']
+        # check whether each of these combinations exist in metadata
+        if not(all([(cc in combis) for cc in current_combis])):
+            print(f'Warning: {current_combis} not found in metadata. Skip.', flush=True)
+            continue
+        ### LOAD DATA #########################################################
+        Z = []
+        bio_labels = []
+        mc_labels = []
+        for cc in current_combis:
+            loaded_data = data_loader.load_features(model, dataset, metadata_per_combi[cc])
+            Z.extend(loaded_data)
+            bio_labels.extend(metadata_per_combi[cc]['biological_class'].to_list())
+            mc_labels.extend( metadata_per_combi[cc]['medical_center'  ].to_list())
+        # convert to array so that it is easier to handle
+        Z          = np.array(Z)
+        bio_labels = np.array(bio_labels)
+        mc_labels  = np.array(mc_labels)
 
-            # normalize data for kmeans based on cosine distance
-            if metric == 'cosine':
-                # normalize to unit length
-                Z_norm = Z / np.sqrt((Z**2).sum(axis=1))[:,None]
-            else:
-                Z_norm = Z
+        # normalize data for kmeans based on cosine distance
+        if metric == 'cosine':
+            # normalize to unit length
+            Z_norm = Z / np.sqrt((Z**2).sum(axis=1))[:,None]
+        else:
+            Z_norm = Z
+        ###########################################################################
+
+        ### SELECT K ##############################################################
+        if K is None:
+            print("Compute optimal number of clusters via silhouette scores", flush=True)
+            Ks = np.linspace(minK, maxK, maxK-minK+1, dtype=int)
+            silhouette_scores = compute_silhouette_score_K(Z_norm, Ks, metric, 1337)
+            K  = Ks[np.argmax(silhouette_scores)]
+            print(f"... optimal number of clusters: [{minK}, {maxK}] -> K = {K}.", flush=True)
+            res_df = pd.DataFrame(
+                data=zip([cc_str] * len(Ks), Ks, silhouette_scores),
+                columns=["combination", "K", "silhouette_score"],
+            )
+            all_silhouette_scores = pd.concat([all_silhouette_scores, res_df], axis=0, ignore_index=True)
+        ###########################################################################
+
+        Aris = np.zeros([num_trials, 3])
+        for t in range(num_trials):
+            rnd_seed = 1337 + t
+            ### CLUSTERING WITH OPT. K ################################################
+            kmeans = KMeans(n_clusters=K, random_state=rnd_seed, n_init=5, init='random').fit(Z_norm)
+            cluster_labels = kmeans.labels_
             ###########################################################################
 
-            ### SELECT K ##############################################################
-            find_K = True
-            if K is None:
-                if not(reset_K) and os.path.isfile(results_dir / f"{cc_str}_SilhouetteScores.csv"):
-                    silhouette_scores = np.genfromtxt(results_dir / f"{cc_str}_SilhouetteScores.csv", delimiter=',')
-                    tested_minK = silhouette_scores[0, 0]
-                    tested_maxK = silhouette_scores[0,-1]
-                    if tested_minK<=minK and tested_maxK>=maxK:
-                        find_K = False
-                        K = int(silhouette_scores[0, np.argmax(silhouette_scores[1,:])])
-                        print(
-                            f"... loading optimal number of clusters from file: "
-                            f"[{tested_minK}, {tested_maxK}] -> K = {K}.",
-                            flush=True
-                        )
-                if find_K:
-                    Ks = np.linspace(minK, maxK, maxK-minK+1, dtype=int)
-                    silhouette_scores = compute_silhouette_score_K(Z_norm, Ks, metric, 1337)
-                    K  = Ks[np.argmax(silhouette_scores)]
-                    print(f"... optimal number of clusters: [{minK}, {maxK}] -> K = {K}.", flush=True)
-                    # save to filesystem for potential later use
-                    np.savetxt(results_dir / f"{cc_str}_SilhouetteScores.csv", [Ks, silhouette_scores], delimiter=',')
+            ### CLUSTERING METRICS ####################################################
+            ari_bio, ari_mc, cs = compute_clustering_score(bio_labels, mc_labels, cluster_labels)
+            Aris[t, :] = [ari_bio, ari_mc, cs]
             ###########################################################################
+        res_df = pd.DataFrame(
+            data=zip([cc_str] * num_trials, range(num_trials), Aris[:,0], Aris[:,1], Aris[:,2]),
+            columns=["combination", "trial", "ari_bio", "ari_mc", "clustering_score"],
+        )
+        all_aris = pd.concat([all_aris, res_df], axis=0, ignore_index=True)
+    # Save and log results
+    all_silhouette_scores.to_csv(results_dir / "silhouette_scores.csv", index=False)
+    all_aris.to_csv(results_dir / "aris.csv", index=False)
+    res_agg = {
+        "clustering_score_mean": all_aris["clustering_score"].mean(),
+        "clustering_score_std": all_aris["clustering_score"].std(),
+        "K": int(K),
+        "num_combinations": len(all_combinations),
+        "num_trials": num_trials,
+    }
+    with open(results_dir / "results_summary.json", 'w') as f:
+        json.dump(res_agg, f, indent=4)
+    print(
+        f"Clustering score for model '{model}' on dataset '{dataset}': "
+        f"{np.round(res_agg['clustering_score_mean'], 5)} +- {np.round(res_agg['clustering_score_std'], 5)} "
+        f"(mean +- std.)"
+    )
 
-            Aris = np.zeros([num_trials, 3])
-            for t in range(num_trials):
-                rnd_seed = 1337 + t
-                ### CLUSTERING WITH OPT. K ################################################
-                kmeans = KMeans(n_clusters=K, random_state=rnd_seed, n_init=5, init='random').fit(Z_norm)
-                cluster_labels = kmeans.labels_
-                ###########################################################################
 
-                ### CLUSTERING METRICS ####################################################
-                ari_bio, ari_mc, cs = compute_clustering_score(bio_labels, mc_labels, cluster_labels)
-                Aris[t, :] = [ari_bio, ari_mc, cs]
-                # save to filesystem for later use
-                np.savetxt(results_dir / f"{cc_str}_ARI.csv", Aris, delimiter=',')
-                ###########################################################################
-            print(f"... average clustering score: {np.mean(Aris[:,-1])}", flush=True)
-            print(f"... standard deviation:       {np.std( Aris[:,-1])}", flush=True)
+def compute_all(args_dict):
+    datasets = args_dict.pop('datasets')
+    print(f"Start clustering score calculation for model '{args_dict['model']}' on datasets: {datasets}.")
+    for dataset in datasets:
+        compute(**args_dict, dataset=dataset)
 
 
 if __name__ == '__main__':
-    compute(**vars(get_args()))
+    compute_all(vars(get_args()))

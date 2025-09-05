@@ -63,13 +63,13 @@ python3 -m pathorob.apd.apd_per_dataset \
 ### (c) Clustering score
 
 ```
-python3 -m pathorob.clustering_score.analysis_clustering \
+python3 -m pathorob.clustering_score.clustering_score \
 --model uni2h_clsmean \
 --dataset { camelyon OR tcga OR tolkach_esca }
 ```
 
 - Results: `results/clustering_score`
-- Further arguments: `pathorob/clustering_score/analysis_clustering.py`
+- Further arguments: `pathorob/clustering_score/clustering_score.py`
 
 
 ## 4) Clustering Analysis
@@ -78,9 +78,9 @@ python3 -m pathorob.clustering_score.analysis_clustering \
 
 To evaluate the clustering performance, navigate to directory `PathoROB/pathorob/clustering_score/` and run the following script:
 
-```python analysis_clustering.py --model <your FM> --dataset <your dataset>```
+```python clustering_score.py --model <your FM> --dataset <your dataset>```
 
-where `<your dataset>` must match one of PathoROB’s datasets, i.e., `camelyon`, `tolkach_esca`, or `tcga`. `<your FM>`is the name of the foundation model for which the clustering score will be evaluated. This name must match the name of the folder in `feature_dir` that holds the feature representations of this foundation model. `analysis_clustering.py` also provides other optional arguments that let you further modify your experiments. Please see `python analysis_clustering.py --help` for more information.
+where `<your dataset>` must match one of PathoROB’s datasets, i.e., `camelyon`, `tolkach_esca`, or `tcga`. `<your FM>`is the name of the foundation model for which the clustering score will be evaluated. This name must match the name of the folder in `feature_dir` that holds the feature representations of this foundation model. `clustering_score.py` also provides other optional arguments that let you further modify your experiments. Please see `python clustering_score.py --help` for more information.
 
 In its default version, this script first selects the number of clusters by maximizing the silhouette score, then performs clustering 50 times, and finally calculates the average clustering score and its standard deviation. The results are printed to the standard output. Additionally, the results are saved in the following CSV files:
 * `<2xbiological_class-2xmedical_center-combination>_SilhouetteScores.csv` (shape: `[2, 29]`):
