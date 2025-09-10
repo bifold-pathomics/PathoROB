@@ -1,5 +1,8 @@
 # PathoROB
 
+![Overview of the PathoROB benchmark.](docs/pathorob_overview.png)
+![Overview of the PathoROB pipeline.](docs/pathorob_pipeline.png)
+
 ## Installation
 
 ```shell
