@@ -28,8 +28,10 @@ class UNI2hModelWrapper(ModelWrapper):
         self.model = timm.create_model("hf-hub:MahmoodLab/UNI2-h", pretrained=True, **timm_kwargs)
         self.model.eval()
 
-    @staticmethod
-    def get_preprocess():
+    def get_model(self):
+        return self.model
+
+    def get_preprocess(self):
         return transforms.Compose(
             [
                 transforms.Resize(224),
@@ -37,9 +39,6 @@ class UNI2hModelWrapper(ModelWrapper):
                 transforms.Normalize(*IMAGENET_NORM),
             ]
         )
-
-    def get_model(self):
-        return self.model
 
     def extract(self, data):
         # Concatenate class token and mean of patch tokens

@@ -19,9 +19,11 @@ class Phikonv2ModelWrapper(ModelWrapper):
 
     def __init__(self):
         self.model = Phikonv2()
-        
-    @staticmethod
-    def get_preprocess():
+
+    def get_model(self):
+        return self.model
+
+    def get_preprocess(self):
         return transforms.Compose(
             [
                 transforms.Resize(224),
@@ -30,9 +32,6 @@ class Phikonv2ModelWrapper(ModelWrapper):
                 transforms.Normalize(*IMAGENET_NORM),
             ]
         )
-
-    def get_model(self):
-        return self.model
 
     def extract(self, data):
         # Concatenate class token and mean of patch tokens

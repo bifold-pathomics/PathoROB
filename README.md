@@ -1,6 +1,6 @@
 # PathoROB
 
-## 1) Installation
+## Installation
 
 ```shell
 conda create -n "pathorob" python=3.10 -y
@@ -12,7 +12,7 @@ pip install -r requirements.txt
 > To ensure that the conda environment does not contain any user-specific site packages (e.g., from ~/.local/lib), run `export PYTHONNOUSERSITE=1` after activating your environment.
 
 
-## 2) Feature Extraction
+## Feature extraction
 
 ```
 python3 -m pathorob.features.extract_features \
@@ -23,7 +23,7 @@ python3 -m pathorob.features.extract_features \
 - Results: `data/features/uni2h_clsmean`
 - Further arguments: `pathorob/features/extract_features.py`
 
-## 3) Benchmark: Quickstart
+## Running the benchmark
 
 ### (a) Robustness index
 
@@ -58,32 +58,46 @@ python3 -m pathorob.clustering_score.clustering_score \
 - Results: `results/clustering_score`
 - Further arguments: `pathorob/clustering_score/clustering_score.py`
 
+## Adding your own model
 
-## 4) Clustering Analysis
+1. Create a new Python file in `pathorob.models`.
+2. Import the `ModelWrapper` from `pathorob.models.utils`.
+3. Define a new model wrapper class and implement the required functions (see template below).
+   - Examples: `pathorob.models.uni` or `pathorob.models.phikon`.
+4. Add your model wrapper to the `load_model` function in `pathorob.models.__init__` and choose a `model_name`.
+5. Run the feature extraction script using your `model_name`.
+   - `python3 -m pathorob.features.extract_features --model <model_name>`
 
-### Clustering score computation
+```python
+class MyModelWrapper(ModelWrapper):
 
-To evaluate the clustering performance, navigate to directory `PathoROB/pathorob/clustering_score/` and run the following script:
+    def __init__(self, ...):
+        """
+        Optional: Define custom arguments that can be passed to the model in the extract_features entrypoint via 
+        `--model_args` as a dictionary. 
+        """
 
-```python clustering_score.py --model <your FM> --dataset <your dataset>```
+    def get_model(self):
+        """
+        :return: A model object (e.g., `torch.nn.Module`) that has an `eval()` and a `to(device)` method.
+        """
 
-where `<your dataset>` must match one of PathoROB’s datasets, i.e., `camelyon`, `tolkach_esca`, or `tcga`. `<your FM>`is the name of the foundation model for which the clustering score will be evaluated. This name must match the name of the folder in `feature_dir` that holds the feature representations of this foundation model. `clustering_score.py` also provides other optional arguments that let you further modify your experiments. Please see `python clustering_score.py --help` for more information.
+    def get_preprocess(self):
+        """
+        Preprocessing to apply to raw PIL images before passing the data to the model.
 
-In its default version, this script first selects the number of clusters by maximizing the silhouette score, then performs clustering 50 times, and finally calculates the average clustering score and its standard deviation. The results are printed to the standard output. Additionally, the results are saved in the following CSV files:
-* `<2xbiological_class-2xmedical_center-combination>_SilhouetteScores.csv` (shape: `[2, 29]`):
-    Contains silhouette scores for each tested number of clusters.
-    - `[0,:]`: tested values of K (in this case, 2 to 30)
-    - `[1,:]`: corresponding silhouette scores
-* `<2xbiological_class-2xmedical_center-combination>_ARI.csv` (shape: `[50, 3]`):
-    Contains the adjusted Rand indices (ARI) for each of the 50 repetitions.
-    - `[:,0]`: ARI for biological labels
-    - `[:,1]`: ARI for medical center labels
-    - `[:,2]`: clustering scores
+        :return: A function or an executable object (e.g., `torchvision.transforms.Compose`) that accepts a `PIL.Image`
+            as input and returns what the `extract` function needs for feature extraction. Note that the result will
+            be batched by the default `collate_fn` of a torch DataLoader (`torch.utils.data.DataLoader`).
+        """
 
-The evaluation of the clustering score is conducted for each 2x2 pairing of two biological classes and two medical centers separately which is indicated in the results files `<2xbiological_class-2xmedical_center-combination>`.
-* expected run time: depends on `<your dataset>`. Per `<2xbiological_class-2xmedical_center-combination>` the expected run time is less than 5 minutes on a MacBook Pro 3112 (M4). The number of `<2xbiological_class-2xmedical_center-combination>` differs for each dataset: `camelyon`: 1, `tolkach_esca`: 45, `tcga`: 36.
+    def extract(self, data) -> torch.Tensor:
+        """
+        Feature extraction step for preprocessed and batched image data.
 
-Results location:
-```
-PathoROB/results/clustering_score/<your FM>/<your dataset>/
+        :param data: (batch_size, ...) A batch of preprocessed image data. The images were preprocessed individually
+            via `get_preprocess()` and batched via the default `collate_fn` of a torch DataLoader 
+            (`torch.utils.data.DataLoader`).
+        :return: (batch_size, feature_dim) A torch Tensor containing the extracted features.
+        """
 ```
