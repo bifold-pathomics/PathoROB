@@ -34,7 +34,7 @@ class FeatureDataManager:
     def get_available_metadata(self):
         return sorted([
             metadata_dir.stem for metadata_dir in self.metadata_dir.iterdir()
-            if metadata_dir.is_file()
+            if metadata_dir.is_file() and metadata_dir.suffix == ".csv"
         ])
 
     def save_features(self, model_name, dataset_name, features, metadata):
