@@ -69,6 +69,8 @@ python3 -m pathorob.clustering_score.clustering_score \
    - `python3 -m pathorob.features.extract_features --model <model_name>`
 
 ```python
+from pathorob.models.utils import ModelWrapper
+
 class MyModelWrapper(ModelWrapper):
 
     def __init__(self, ...):
