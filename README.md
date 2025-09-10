@@ -2,27 +2,13 @@
 
 ## 1) Installation
 
-Requirements for feature extraction:
-- numpy
-- pandas
+```shell
+conda create -n "pathorob" python=3.10 -y
+conda activate pathorob
+pip install -r requirements.txt
+```
 
- 
-- tqdm
-- torch
-- torchvision
-- datasets
-- huggingface_hub
-- timm
-
-Additional requirements for PathoROB repository:
-- pandas==2.2.3
-- numpy==2.1.3
-
-
-- scipy==1.14.1
-- scikit-learn==1.5.2
-- matplotlib==3.9.2
-- seaborn==0.13.2
+> Note: To ensure that the conda environment does not contain any user-specific site packages (e.g., from ~/.local/lib), run `export PYTHONNOUSERSITE=1` after activating your environment.
 
 
 ## 2) Feature Extraction

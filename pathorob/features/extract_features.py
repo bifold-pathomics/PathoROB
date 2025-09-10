@@ -120,6 +120,7 @@ def compute(
     print(f"Loading '{model}' model...")
     model_wrapper = load_model(model_name=model, model_args=model_args)
     data_manager = FeatureDataManager(features_dir=features_dir)
+    print(f"Feature extraction will be run on device: '{device}'")
     device = torch.device(device)
 
     for dataset_name in datasets:
