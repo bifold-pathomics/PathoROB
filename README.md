@@ -71,6 +71,7 @@ python3 -m pathorob.clustering_score.clustering_score \
 ```python
 from pathorob.models.utils import ModelWrapper
 
+
 class MyModelWrapper(ModelWrapper):
 
     def __init__(self, ...):
