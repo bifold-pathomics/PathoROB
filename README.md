@@ -28,7 +28,7 @@ python3 -m pathorob.features.extract_features \
 
 ## Running the benchmark
 
-### (a) Robustness index
+### (a) Robustness Index
 
 ```
 python3 -m pathorob.robustness_index.robustness_index \
@@ -39,7 +39,7 @@ python3 -m pathorob.robustness_index.robustness_index \
 - Results: `results/robustness_index`
 - Further arguments: `pathorob/robustness_index/robustness_index.py`
 
-### (b) Average performance drop (APD)
+### (b) Average Performance Drop (APD)
 
 ```
 python3 -m pathorob.apd.apd_per_dataset \
@@ -50,7 +50,7 @@ python3 -m pathorob.apd.apd_per_dataset \
 - Results: `results/apd`
 - Further arguments: `pathorob/apd/apd_per_dataset.py`
 
-### (c) Clustering score
+### (c) Clustering Score
 
 ```
 python3 -m pathorob.clustering_score.clustering_score \
