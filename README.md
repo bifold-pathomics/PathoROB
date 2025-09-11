@@ -59,9 +59,9 @@ python3 -m pathorob.robustness_index.robustness_index \
 #### (2) Average Performance Drop (APD)
 
 ```
-python3 -m pathorob.apd.apd_per_dataset \
+python3 -m pathorob.apd.apd \
 --model uni2h_clsmean \
---dataset { camelyon OR tcga OR tolkach_esca }
+--datasets { camelyon tcga tolkach_esca }
 ```
 
 - Results: `results/apd`
@@ -72,7 +72,7 @@ python3 -m pathorob.apd.apd_per_dataset \
       - In-/out-of-domain accuracy means per split averaged over trails.
    - {model}/aggregated_summary.json:
       - In-/out-of-domain APDs with 95% confidence intervals over all specified datasets.
-- Further arguments: `pathorob/apd/apd_per_dataset.py`
+- Further arguments: `pathorob/apd/apd.py`
 
 #### (3) Clustering Score
 
