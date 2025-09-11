@@ -69,10 +69,8 @@ python3 -m pathorob.apd.apd_per_dataset \
 
 #### (3) Clustering Score
 
-```
-python3 -m pathorob.clustering_score.clustering_score \
---model uni2h_clsmean \
---dataset { camelyon OR tcga OR tolkach_esca }
+```shell
+python3 -m pathorob.clustering_score.clustering_score --model uni2h_clsmean
 ```
 
 - Results: `results/clustering_score`
