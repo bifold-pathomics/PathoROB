@@ -65,6 +65,13 @@ python3 -m pathorob.apd.apd_per_dataset \
 ```
 
 - Results: `results/apd`
+   - {model}/{dataset}_raw.json per {dataset}:
+      - In-/out-of-domain accuracies per split and trail.
+   - {model}/{dataset}_summary.json per {dataset}:
+      - In-/out-of-domain APDs for the specific {dataset}.
+      - In-/out-of-domain accuracy means per split averaged over trails.
+   - {model}/aggregated_summary.json:
+      - In-/out-of-domain APDs with 95% confidence intervals over all specified datasets.
 - Further arguments: `pathorob/apd/apd_per_dataset.py`
 
 #### (3) Clustering Score
