@@ -211,14 +211,14 @@ Please also cite the source publications of _all_ PathoROB datasets that you use
 - **Camelyon** (Source: [CAMELYON16](https://camelyon16.grand-challenge.org/) and [CAMELYON17](https://camelyon17.grand-challenge.org/Home/), License: CC0 1.0)
 ```
 @article{bejnordi2017camelyon16,
-    title = {Diagnostic Assessment of Deep Learning Algorithms for Detection of Lymph Node Metastases in Women With Breast Cancer},
-    author = {Ehteshami Bejnordi, Babak and Veta, Mitko and Johannes van Diest, Paul and van Ginneken, Bram and Karssemeijer, Nico and Litjens, Geert and van der Laak, Jeroen A. W. M. and and the CAMELYON16 Consortium},
-    journal = {JAMA},
-    year = {2017},
-    volume = {318},
-    number = {22},
-    pages = {2199-2210},
-    doi = {10.1001/jama.2017.14585}
+    title={Diagnostic Assessment of Deep Learning Algorithms for Detection of Lymph Node Metastases in Women With Breast Cancer},
+    author={Ehteshami Bejnordi, Babak and Veta, Mitko and Johannes van Diest, Paul and van Ginneken, Bram and Karssemeijer, Nico and Litjens, Geert and van der Laak, Jeroen A. W. M. and and the CAMELYON16 Consortium},
+    journal={JAMA},
+    year={2017},
+    volume={318},
+    number={22},
+    pages={2199-2210},
+    doi={10.1001/jama.2017.14585}
 }
 ```
 ```
@@ -237,14 +237,14 @@ Please also cite the source publications of _all_ PathoROB datasets that you use
 - **TCGA** (Source: [TCGA-UT](https://zenodo.org/records/5889558), License: CC-BY-NC-SA 4.0)
 ```
 @article{komura22tcga-ut,
-    title = {Universal encoding of pan-cancer histology by deep texture representations},
-    author = {Daisuke Komura and Akihiro Kawabe and Keisuke Fukuta and Kyohei Sano and Toshikazu Umezaki and Hirotomo Koda and Ryohei Suzuki and Ken Tominaga and Mieko Ochi and Hiroki Konishi and Fumiya Masakado and Noriyuki Saito and Yasuyoshi Sato and Takumi Onoyama and Shu Nishida and Genta Furuya and Hiroto Katoh and Hiroharu Yamashita and Kazuhiro Kakimi and Yasuyuki Seto and Tetsuo Ushiku and Masashi Fukayama and Shumpei Ishikawa},
-    journal = {Cell Reports},
-    year = {2022},
-    volume = {38},
-    number = {9},
-    pages = {110424},
-    doi = {https://doi.org/10.1016/j.celrep.2022.110424}
+    title={Universal encoding of pan-cancer histology by deep texture representations},
+    author={Daisuke Komura and Akihiro Kawabe and Keisuke Fukuta and Kyohei Sano and Toshikazu Umezaki and Hirotomo Koda and Ryohei Suzuki and Ken Tominaga and Mieko Ochi and Hiroki Konishi and Fumiya Masakado and Noriyuki Saito and Yasuyoshi Sato and Takumi Onoyama and Shu Nishida and Genta Furuya and Hiroto Katoh and Hiroharu Yamashita and Kazuhiro Kakimi and Yasuyuki Seto and Tetsuo Ushiku and Masashi Fukayama and Shumpei Ishikawa},
+    journal={Cell Reports},
+    year={2022},
+    volume={38},
+    number={9},
+    pages={110424},
+    doi={https://doi.org/10.1016/j.celrep.2022.110424}
 }
 ```
 
