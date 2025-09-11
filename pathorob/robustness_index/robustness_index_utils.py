@@ -1,4 +1,5 @@
 import copy
+import json
 import os
 import pickle
 from pathlib import Path
@@ -570,6 +571,19 @@ def evaluate_embeddings(dataset, meta_sel, knn_indices):
     return stats
 
 
+def convert_types_in_stats(stats):
+    for k, v in stats.items():
+        if isinstance(v, np.ndarray):
+            stats[k] = v.tolist()
+        elif isinstance(v, (np.integer, np.int64)):
+            stats[k] = int(v)
+        elif isinstance(v, (np.floating, np.float64)):
+            stats[k] = float(v)
+        else:
+            stats[k] = v
+    return stats
+
+
 def save_total_stats(stats, meta, dataset, model, results_folder, k_opt, bal_acc_at_k_opt):
     stats['k_opt'] = k_opt #store k_opt in stats
     stats['bal_acc_at_k_opt'] = bal_acc_at_k_opt #store max bal acc, obtained using k = k_opt
@@ -580,22 +594,29 @@ def save_total_stats(stats, meta, dataset, model, results_folder, k_opt, bal_acc
     df_dict["OOD_performance-k_opt"] = stats["OOD_performance"][index_k_opt]
     df_dict["generalization_index-k_opt"] = stats["generalization_index"][index_k_opt]
     df_dict["SO_SS_ratio-k_opt"] = stats["SO_SS_ratio"][index_k_opt]
+
     if "robustness_index-mean" in stats and len(stats["robustness_index-mean"]) > index_k_opt:
         stats["robustness_index-mean-k_opt"] = stats["robustness_index-mean"][index_k_opt]
         stats["robustness_index-std-k_opt"] = stats["robustness_index-mean"][index_k_opt]
         df_dict["robustness_index-mean-k_opt"] = stats["robustness_index-mean-k_opt"]
         df_dict["robustness_index-std-k_opt"] = stats["robustness_index-std-k_opt"]
+
     biological_class_field, confounding_class_field = get_field_names_given_dataset(dataset)
     all_bio_classes = np.unique(meta[biological_class_field].values)
     all_conf_classes = np.unique(meta[confounding_class_field].values)
+
     fn = os.path.join(results_folder, f'frequencies-same-class-{model}.pkl')
     with open(fn, 'wb') as f:
         pickle.dump({'stats': stats, 'all_bio_classes': all_bio_classes, 'all_conf_classes': all_conf_classes}, f)
     print(f'saved results to {fn}')
-    fn = os.path.join(results_folder, f'results-summary-{model}.csv')
-    df = pd.DataFrame(df_dict, index=[0])
-    df.to_csv(fn, index=False)
-    print(f'saved results summary to {fn}')
+
+    # Store summary file
+    output_file = os.path.join(results_folder, f'results_summary.json')
+    df_dict = convert_types_in_stats(df_dict)
+    with open(output_file, 'w') as f:
+        json.dump(df_dict, f, indent=4)
+
+    print(f'saved results summary to {output_file}')
     return stats
 
 def plot_3a_optimal_k_per_model(model, k_values_sel, bal_accs, k_opt, fig_folder):
