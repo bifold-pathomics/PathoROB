@@ -1,5 +1,4 @@
 import os
-import glob
 import time
 import argparse
 
@@ -11,7 +10,8 @@ from sklearn.preprocessing import LabelEncoder, Normalizer
 from pathorob.features.data_manager import FeatureDataManager
 from pathorob.features.constants import AVAILABLE_DATASETS
 import pathorob.robustness_index.robustness_graphs as robustness_graphs
-from pathorob.robustness_index.robustness_index_paired import calc_rob_index_pairs
+from pathorob.robustness_index.robustness_index_paired import calc_rob_index_pairs, \
+    evaluate_model_pairs
 from pathorob.robustness_index.robustness_index_utils import (
     aggregate_stats, save_total_stats, get_field_names_given_dataset, evaluate_knn_accuracy, get_k_values,
     save_balanced_accuracies, evaluate_embeddings, calculate_per_class_prediction_stats,
@@ -34,9 +34,11 @@ def get_args():
     parser = argparse.ArgumentParser(description='Calculate robustness index for a given dataset and model.')
 
     #required parameters
-    parser.add_argument('--model', type=str, default="all", help='Model name or "all" to process all models')
-    parser.add_argument('--dataset', type=str, help='Dataset name', choices=AVAILABLE_DATASETS)
-
+    parser.add_argument('--model', type=str, help='Model name')
+    parser.add_argument(
+        "--datasets", type=str, nargs="+", default=AVAILABLE_DATASETS,
+        help=f"PathoROB datasets on which the robustess index is computed. Available datasets: {AVAILABLE_DATASETS}."
+    )
     #optional parameters
     parser.add_argument('--features_dir', type=str, default="data/features", help='Folder for embeddings. The features should be stored in this folder: [features_dir]/[model]/[dataset].')
     parser.add_argument('--metadata_dir', type=str, default="data/metadata", help='Folder for metadata.')
@@ -218,6 +220,22 @@ def calc_rob_index(data_manager, models, dataset, meta, results_folder, fig_fold
         robustness_metrics_dict[model] = robustness_metrics
     return results, robustness_metrics_dict
 
+def calc_rob_index_model(paired_eval, data_manager, model, dataset, meta, results_folder, fig_folder, num_workers=8, k_opt_param=-1, compute_bootstrapped_robustness_index=False, DBG=False, plot_graphs=True):
+    results = {}
+    robustness_metrics_dict = {}
+
+    # fn = os.path.join(results_folder, f'frequencies-same-class-{model}.pkl')
+    # if os.path.exists(fn):
+    #     print(f"model {model}: results already exist --> skipping. Found {fn}")
+    #     continue
+    if paired_eval:
+        bio_class_prediction_results, robustness_metrics = evaluate_model_pairs(dataset, data_manager, model, meta, results_folder, fig_folder, num_workers=num_workers, k_opt_param=k_opt_param, DBG=DBG, compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, plot_graphs=plot_graphs)
+    else:
+        bio_class_prediction_results, robustness_metrics = evaluate_model(dataset, data_manager, model, meta, results_folder, fig_folder, num_workers=num_workers, k_opt_param=k_opt_param,  compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, DBG=DBG, plot_graphs=plot_graphs)
+    results[model] = bio_class_prediction_results
+    robustness_metrics_dict[model] = robustness_metrics
+    return results, robustness_metrics_dict
+
 
 def get_meta(data_manager, dataset, paired_evaluation):
     if dataset == "tcga":
@@ -366,7 +384,7 @@ def results_summary(meta, max_patches_per_combi, results_folder, model_k_opt, me
     nr_patches = len(meta)
     result = {}
 
-    print(results)
+    # print(results)
 
     print(f"results_summary: models in results: {list(results.keys())}")
     models = results.keys()
@@ -500,9 +518,10 @@ def compute(
 ):
     t_start = time.time()
 
-    if model != "all":
-        print(f"processing model {model}")
-        models = [model]
+    models = [model]
+    # if model != "all":
+    #     print(f"processing model {model}")
+    #     models = [model]
 
     if paired_evaluation is None:
         # default: use paired setup for TCGA, as it has many biological and confounding classes and is not balanced
@@ -522,9 +541,9 @@ def compute(
     options["DBG"] = DBG
     results_folder, fig_folder = get_folder_paths(options, dataset)
 
-    if model == "all":
-        models = [f.split("/")[-1].replace("frequencies-same-class-", "").replace(".pkl", "") for f in
-                  glob.glob(os.path.join(results_folder, "*.pkl"))]
+    # if model == "all":
+    #     models = [f.split("/")[-1].replace("frequencies-same-class-", "").replace(".pkl", "") for f in
+    #               glob.glob(os.path.join(results_folder, "*.pkl"))]
 
     os.makedirs(results_folder, exist_ok=True)
     os.makedirs(fig_folder, exist_ok=True)
@@ -533,10 +552,17 @@ def compute(
     meta = get_meta(data_manager, dataset, options["paired_evaluation"])
     meta = reduce_dataset(results_folder, dataset, meta, max_patches_per_combi=max_patches_per_combi)
 
-    if options["paired_evaluation"]: #calculate robustness index for pairs of 2 bio classes and 2 confounding classes
-        robustness_metrics_dict, results = calc_rob_index_pairs(data_manager, models, dataset, meta, results_folder, fig_folder, num_workers=num_workers, k_opt_param=k_opt_param, DBG=DBG, compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, plot_graphs=plot_graphs)
-    else: #calculate robustness index for any number of bio classes and any number of confounding classes
-        robustness_metrics_dict, results = calc_rob_index(data_manager, models, dataset, meta, results_folder, fig_folder, num_workers=num_workers, k_opt_param=k_opt_param, compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, DBG=DBG, plot_graphs=plot_graphs)
+    # if options["paired_evaluation"]: #calculate robustness index for pairs of 2 bio classes and 2 confounding classes
+    #     robustness_metrics_dict, results = calc_rob_index_pairs(data_manager, models, dataset, meta, results_folder, fig_folder, num_workers=num_workers, k_opt_param=k_opt_param, DBG=DBG, compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, plot_graphs=plot_graphs)
+    # else: #calculate robustness index for any number of bio classes and any number of confounding classes
+    #     robustness_metrics_dict, results = calc_rob_index(data_manager, models, dataset, meta, results_folder, fig_folder, num_workers=num_workers, k_opt_param=k_opt_param, compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, DBG=DBG, plot_graphs=plot_graphs)
+
+    robustness_metrics_dict, results = calc_rob_index_model(options["paired_evaluation"], data_manager, models[0], dataset, meta,
+                                                      results_folder, fig_folder,
+                                                      num_workers=num_workers,
+                                                      k_opt_param=k_opt_param,
+                                                      compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index,
+                                                      DBG=DBG, plot_graphs=plot_graphs)
 
     if k_opt_param == -1:
         if plot_graphs:
@@ -544,7 +570,7 @@ def compute(
         median_k_opt = get_median_k_opt_given_dataset(dataset)
         print(f"dataset {dataset} found model k_opt {model_k_opt}  median k_opt: {median_k_opt:.2f}")
     else: #fixed k_opt_param
-        print(f"using fixed k_opt_param {k_opt_param} for all models")
+        print(f"using fixed k_opt_param {k_opt_param}")
         model_k_opt = {model: k_opt_param} #use specified value for all plots
         median_k_opt = k_opt_param
         model_bal_acc_values=None
@@ -582,5 +608,12 @@ def compute(
     return robustness_metrics_dict
 
 
+def compute_all(args_dict):
+    datasets = args_dict.pop('datasets')
+    print(f"Start robustness index calculation for model '{args_dict['model']}' on datasets: {datasets}.")
+    for dataset in datasets:
+        compute(**args_dict, dataset=dataset)
+
+
 if __name__ == '__main__':
-    compute(**vars(get_args()))
+    compute_all(vars(get_args()))
