@@ -1,6 +1,7 @@
 import copy
 import os
 import pickle
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -921,7 +922,7 @@ def get_robustness_results_median_k_opt_per_dataset(datasets, models, options):
             if not model in robustness_index_vectors:
                 robustness_index_vectors[model] = {}
             options_tmp = get_default_dataset_options(dataset, options)
-            results_folder, fig_folder = get_folder_paths(options_tmp, dataset)
+            results_folder, fig_folder = get_folder_paths(options_tmp, dataset, model)
             stats = get_stats(model, results_folder)
             k_range, robustness_index, _, robustness_index_std = get_robustness_index_k_range(model, results_folder)
             k_opt = int(stats['k_opt'])
@@ -972,7 +973,7 @@ def get_robustness_results_all_datasets(datasets, models, options):
         k_opt_values = []
         for dataset in datasets:
             options_tmp = get_default_dataset_options(dataset, options)
-            results_folder, fig_folder = get_folder_paths(options_tmp, dataset)
+            results_folder, fig_folder = get_folder_paths(options_tmp, dataset, model)
             k_range, robustness_index, _, robustness_index_std = get_robustness_index_k_range(model, results_folder)
 
             if k_range is None:
@@ -1005,7 +1006,7 @@ def get_robustness_results_per_dataset(datasets, models, options):
         model_robustness_index[model] = {}
         for dataset in datasets:
             options_tmp = get_default_dataset_options(dataset, options)
-            results_folder, fig_folder = get_folder_paths(options_tmp, dataset)
+            results_folder, fig_folder = get_folder_paths(options_tmp, dataset, model)
             k_range, robustness_index, _, robustness_index_std = get_robustness_index_k_range(model, results_folder)
             if k_range is None:
                 print(f"skipping model {model} for dataset {dataset}")
@@ -1032,7 +1033,6 @@ def get_default_dataset_options(dataset, options):
     options_tmp = copy.deepcopy(options)
     max_patches_per_combi_model = {"tcga-uniform-subset": -1, "tcga-2k": -1, "tcga-4x4": -1, "camelyon16": -1, "camelyon17": -1, "tolkach-esca": -1}
     options_tmp["max_patches_per_combi"] = max_patches_per_combi_model[dataset]
-    get_folder_paths(options_tmp, dataset)
     return options_tmp
 
 
@@ -1041,9 +1041,9 @@ def get_k_opt_per_dataset(datasets, models, options):
     for dataset in datasets:
         k_opts_per_dataset[dataset] = {}
         options_tmp = get_default_dataset_options(dataset, options)
-        results_folder, fig_folder = get_folder_paths(options_tmp, dataset)
         k_opts = []
         for model in models:
+            results_folder, fig_folder = get_folder_paths(options_tmp, dataset, model)
             stats = get_stats(model, results_folder)
             if stats is not None:
                 k_opt = int(stats['k_opt'])
@@ -1056,31 +1056,26 @@ def get_k_opt_per_dataset(datasets, models, options):
     return k_opts_per_dataset
 
 
-def get_folder_paths(options, dataset):
-    results_dir = options["results_dir"]
-    figures_dir = options["figures_dir"]
+def get_folder_paths(options, dataset, model):
+    results_folder = Path(options["results_dir"])
+    fig_subfolder = Path(options["figures_subdir"])
     max_patches_per_combi = options["max_patches_per_combi"]
     k_opt_param = options["k_opt_param"]
 
-    results_folder = results_dir
-    fig_folder = figures_dir
+    args_subfolder = f"{max_patches_per_combi}_{k_opt_param}"
 
     if options["DBG"]:
-        results_folder= os.path.join(results_folder, "debug")
-        fig_folder = os.path.join(fig_folder, "debug")
+        results_folder = results_folder / "debug"
 
-    results_folder = os.path.join(results_folder, dataset)
-    fig_folder = os.path.join(fig_folder, dataset)
-
-    results_folder = results_folder + f"-{max_patches_per_combi}"
-    fig_folder = fig_folder + f"-{max_patches_per_combi}"
-
-    results_folder = results_folder + f"-{k_opt_param}"
-    fig_folder = fig_folder + f"-{k_opt_param}"
+    results_folder = results_folder / model / dataset / args_subfolder
+    fig_folder = results_folder / fig_subfolder    # TODO: are they by model or generic?
 
     print(f"using results_folder: {results_folder}, fig_folder: {fig_folder}")
 
     options["results_folder"] = results_folder
     options["fig_folder"] = fig_folder
+
+    results_folder.mkdir(parents=True, exist_ok=True)
+    fig_folder.mkdir(parents=True, exist_ok=True)
 
     return results_folder, fig_folder

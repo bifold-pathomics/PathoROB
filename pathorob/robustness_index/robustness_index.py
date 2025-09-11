@@ -43,7 +43,7 @@ def get_args():
     parser.add_argument('--features_dir', type=str, default="data/features", help='Folder for embeddings. The features should be stored in this folder: [features_dir]/[model]/[dataset].')
     parser.add_argument('--metadata_dir', type=str, default="data/metadata", help='Folder for metadata.')
     parser.add_argument('--results_dir', type=str, default="results/robustness_index", help='Root folder for results.')
-    parser.add_argument('--figures_dir', type=str, default="results/robustness_index/fig", help='Root folder for figures.')
+    parser.add_argument('--figures_subdir', type=str, default="fig", help='Root folder for figures.')
     parser.add_argument('--paired_evaluation', type=str2bool, default=None, help='Whether to use paired evaluation. Per default (None), this is True for tcga and False for the other datasets.')
     parser.add_argument('--k_opt_param', type=int, default=-1, help='Currently, k_opt_param should be set to the default value of -1, which ensures results are produced for all values of k. For future use, this parameter can be set to a specific k value to only report the robustness index for the specified value of k. '                                                                    'Fixed k_opt parameter; if -1, the optimal k value will be optimized based on biological class prediction.')
     parser.add_argument('--max_patches_per_combi', type=int, default=-1, help='Maximum patches per combination. -1 for no limit, or a specific number to limit the dataset size.')
@@ -507,7 +507,7 @@ def compute(
         features_dir: str = "data/features",
         metadata_dir: str = "data/metadata",
         results_dir: str = "results/robustness_index",
-        figures_dir: str = "results/robustness_index/fig",
+        figures_subdir: str = "results/robustness_index/fig",
         paired_evaluation: bool = None,
         k_opt_param: int = -1,
         max_patches_per_combi: int = -1,
@@ -530,7 +530,7 @@ def compute(
     options = {
         "model": model, "max_patches_per_combi": max_patches_per_combi,
         "k_opt_param": k_opt_param, "dataset": dataset, "results_dir": results_dir,
-        "figures_dir": figures_dir, "paired_evaluation": paired_evaluation, "metadata_dir": metadata_dir
+        "figures_subdir": figures_subdir, "paired_evaluation": paired_evaluation, "metadata_dir": metadata_dir
     }
 
     print("using these settings:")
@@ -539,14 +539,11 @@ def compute(
 
     DBG=debug_mode
     options["DBG"] = DBG
-    results_folder, fig_folder = get_folder_paths(options, dataset)
+    results_folder, fig_folder = get_folder_paths(options, dataset, model)
 
     # if model == "all":
     #     models = [f.split("/")[-1].replace("frequencies-same-class-", "").replace(".pkl", "") for f in
     #               glob.glob(os.path.join(results_folder, "*.pkl"))]
-
-    os.makedirs(results_folder, exist_ok=True)
-    os.makedirs(fig_folder, exist_ok=True)
 
     data_manager = FeatureDataManager(features_dir=features_dir, metadata_dir=metadata_dir)
     meta = get_meta(data_manager, dataset, options["paired_evaluation"])
