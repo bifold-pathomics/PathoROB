@@ -34,16 +34,15 @@ pip install -r requirements.txt
 
 ### Feature extraction
 
-```
-python3 -m pathorob.features.extract_features \
---model uni2h_clsmean \
---model_args '{"hf_token": "<TOKEN>"}'
+```shell
+python3 -m pathorob.features.extract_features --model uni2h_clsmean --model_args '{"hf_token": "<TOKEN>"}'
 ```
 
 - Results: `data/features/uni2h_clsmean`
+- Datasets: Per default, features for all PathoROB datasets will be extracted (`camelyon`, `tcga`, `tolkach_esca`). To select any subset of these, use `--datasets <dataset1> ...`.
 - Further arguments: `pathorob/features/extract_features.py`
 
-### Running the benchmark
+### Benchmark metrics
 
 #### (1) Robustness Index
 
@@ -65,12 +64,12 @@ python3 -m pathorob.apd.apd \
 ```
 
 - Results: `results/apd`
-   - {model}/{dataset}_raw.json per {dataset}:
+   - `{model}/{dataset}_raw.json` per {dataset}:
       - In-/out-of-domain accuracies per split and trail.
-   - {model}/{dataset}_summary.json per {dataset}:
+   - `{model}/{dataset}_summary.json` per {dataset}:
       - In-/out-of-domain APDs for the specific {dataset}.
       - In-/out-of-domain accuracy means per split averaged over trails.
-   - {model}/aggregated_summary.json:
+   - `{model}/aggregated_summary.json`:
       - In-/out-of-domain APDs with 95% confidence intervals over all specified datasets.
 - Further arguments: `pathorob/apd/apd.py`
 
@@ -81,6 +80,12 @@ python3 -m pathorob.clustering_score.clustering_score --model uni2h_clsmean
 ```
 
 - Results: `results/clustering_score`
+   - `{model}/{dataset}/results_summary.json`:
+     - Summary of the results including the final clustering score. 
+   - `{model}/{dataset}/aris.csv`:
+     - Raw Adjusted Rand Index (ARI) and clustering scores for all for repetitions.
+   - `{model}/{dataset}/silhouette_scores.csv`:
+     - Raw silhouette scores to select the optimal K for clustering.
 - Further arguments: `pathorob/clustering_score/clustering_score.py`
 
 ### Adding your own model
