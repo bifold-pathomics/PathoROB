@@ -1,6 +1,6 @@
 # PathoROB
 
-[Preprint](https://arxiv.org/abs/2507.17845) | [Hugging Face](https://huggingface.co/collections/bifold-pathomics/pathorob-6899f50a714f446d0c974f87) |  [User Guide](#installation) | [Licenses](#licenses) | [Cite](#how-to-cite)
+[Preprint](https://arxiv.org/abs/2507.17845) | [Hugging Face](https://huggingface.co/collections/bifold-pathomics/pathorob-6899f50a714f446d0c974f87) |  [User Guide](#user-guide) | [Licenses](#licenses) | [Cite](#how-to-cite)
 
 **PathoROB is a benchmark for the robustness of pathology foundation models (FMs) to non-biological features.**
 
