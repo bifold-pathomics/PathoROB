@@ -41,6 +41,10 @@ non-biological features.
 
 All results were computed as part of our benchmarking study. For details as well as for the APD and clustering score results, please check our [preprint](https://arxiv.org/abs/2507.17845). 
 
+> [!Note]
+> If you want your model to be added, please [contact](#contact) us.
+
+
 ## User guide
 
 ### Installation
