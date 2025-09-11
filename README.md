@@ -6,7 +6,7 @@
 
 ![PathoROB pipeline](docs/pathorob_pipeline.png)
 
-PathoROB contains **four datasets** covering 28 biological classes from 34 medical centers and **three metrics** for benchmarking FM robustness and its consequences for downstream applications:
+PathoROB contains **four datasets** covering 28 biological classes from 34 medical centers and **three metrics**:
 1. **Robustness Index**: Measures the ability of an FM to capture biological features while ignoring
 non-biological features.
 2. **Average Performance Drop (APD)**: Measures the impact of non-biological features on the generalization performance of downstream models.
