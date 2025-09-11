@@ -1,9 +1,26 @@
 # PathoROB
 
-![Overview of the PathoROB pipeline.](docs/pathorob_pipeline.png)
-![Overview of the PathoROB benchmark.](docs/pathorob_overview.png)
+[Preprint](https://arxiv.org/abs/2507.17845) | [Hugging Face](https://huggingface.co/collections/bifold-pathomics/pathorob-6899f50a714f446d0c974f87) |  [User Guide](#installation) | [Licenses](#licenses) | [Cite](#how-to-cite)
 
-## Installation
+**PathoROB is a benchmark for the robustness of pathology foundation models (FMs) to non-biological features from real-world medical center differences.**
+
+![PathoROB pipeline](docs/pathorob_pipeline.png)
+
+PathoROB contains **four datasets** covering 28 biological classes from 34 medical centers and **three metrics** for benchmarking FM robustness and its consequences for downstream applications:
+1. **Robustness Index**: Measures the ability of an FM to capture biological features while ignoring
+non-biological features.
+2. **Average Performance Drop (APD)**: Measures the impact of non-biological features on the generalization performance of downstream models.
+3. **Clustering Score**: Measures the effect of non-biological features on the quality of k-means clusters.
+
+![PathoROB overview](docs/pathorob_overview.png)
+
+## Leaderboard
+
+**TODO add tables**
+
+## User guide
+
+### Installation
 
 ```shell
 conda create -n "pathorob" python=3.10 -y
@@ -15,7 +32,7 @@ pip install -r requirements.txt
 > To ensure that the conda environment does not contain any user-specific site packages (e.g., from ~/.local/lib), run `export PYTHONNOUSERSITE=1` after activating your environment.
 
 
-## Feature extraction
+### Feature extraction
 
 ```
 python3 -m pathorob.features.extract_features \
@@ -26,9 +43,9 @@ python3 -m pathorob.features.extract_features \
 - Results: `data/features/uni2h_clsmean`
 - Further arguments: `pathorob/features/extract_features.py`
 
-## Running the benchmark
+### Running the benchmark
 
-### (a) Robustness Index
+#### (1) Robustness Index
 
 ```
 python3 -m pathorob.robustness_index.robustness_index \
@@ -39,7 +56,7 @@ python3 -m pathorob.robustness_index.robustness_index \
 - Results: `results/robustness_index`
 - Further arguments: `pathorob/robustness_index/robustness_index.py`
 
-### (b) Average Performance Drop (APD)
+#### (2) Average Performance Drop (APD)
 
 ```
 python3 -m pathorob.apd.apd_per_dataset \
@@ -50,7 +67,7 @@ python3 -m pathorob.apd.apd_per_dataset \
 - Results: `results/apd`
 - Further arguments: `pathorob/apd/apd_per_dataset.py`
 
-### (c) Clustering Score
+#### (3) Clustering Score
 
 ```
 python3 -m pathorob.clustering_score.clustering_score \
@@ -61,7 +78,7 @@ python3 -m pathorob.clustering_score.clustering_score \
 - Results: `results/clustering_score`
 - Further arguments: `pathorob/clustering_score/clustering_score.py`
 
-## Adding your own model
+### Adding your own model
 
 1. Create a new Python file in `pathorob.models`.
 2. Import the `ModelWrapper` from `pathorob.models.utils`.
@@ -108,4 +125,102 @@ class MyModelWrapper(ModelWrapper):
             `collate_fn` of a torch DataLoader  (`torch.utils.data.DataLoader`).
         :return: (batch_size, feature_dim) A torch Tensor containing the extracted features.
         """
+```
+
+## Latest updates
+
+- September 2025: PathoROB is now available on Hugging Face and GitHub. 
+
+## Licenses
+
+The PathoROB datasets were subsampled from public sources. Therefore, we redistribute each PathoROB dataset under the license of its original data source. You can run PathoROB on any subset of datasets with licenses suitable for your application.
+
+- **Camelyon**:
+  - Source: [CAMELYON16](https://camelyon16.grand-challenge.org/) and [CAMELYON17](https://camelyon17.grand-challenge.org/Home/)
+  - License: CC0 1.0 (Public Domain)
+- **TCGA**:
+  - Source: [TCGA-UT](https://zenodo.org/records/5889558)
+  - License: CC-BY-NC-SA 4.0 (Non-Commercial Use)
+- **Tolkach ESCA**
+  - Source: https://zenodo.org/records/7548828
+  - License: CC-BY-SA 4.0
+  - Comment: This license was granted by the author specifically for PathoROB.
+
+## Acknowledgements
+
+We want to thank the authors of the original datasets for making their data publicly available.
+
+## Contact
+
+If you have questions or feedback, please contact:
+- Jonah Kömen (koemen@tu-berlin.de)
+- Edwin D. de Jong (edwin.dejong@aignostics.com)
+- Julius Hense (j.hense@tu-berlin.de)
+
+## How to cite
+
+If you find **PathoROB** useful, please cite our preprint:
+```
+@article{komen2025pathorob,
+  title={Towards Robust Foundation Models for Digital Pathology},
+  author={K{\"o}men, Jonah and de Jong, Edwin D and Hense, Julius and Marienwald, Hannah and Dippel, Jonas and Naumann, Philip and Marcus, Eric and Ruff, Lukas and Alber, Maximilian and Teuwen, Jonas and others},
+  journal={arXiv preprint arXiv:2507.17845},
+  year={2025}
+}
+```
+
+Please also cite the source publications of _all_ PathoROB datasets that you use:
+
+- **Camelyon** (Source: [CAMELYON16](https://camelyon16.grand-challenge.org/) and [CAMELYON17](https://camelyon17.grand-challenge.org/Home/), License: CC0 1.0)
+```
+@article{bejnordi2017camelyon16,
+    title = {Diagnostic Assessment of Deep Learning Algorithms for Detection of Lymph Node Metastases in Women With Breast Cancer},
+    author = {Ehteshami Bejnordi, Babak and Veta, Mitko and Johannes van Diest, Paul and van Ginneken, Bram and Karssemeijer, Nico and Litjens, Geert and van der Laak, Jeroen A. W. M. and and the CAMELYON16 Consortium},
+    journal = {JAMA},
+    year = {2017},
+    volume = {318},
+    number = {22},
+    pages = {2199-2210},
+    doi = {10.1001/jama.2017.14585}
+}
+```
+```
+@article{bandi19camelyon17,
+    title={From Detection of Individual Metastases to Classification of Lymph Node Status at the Patient Level: The CAMELYON17 Challenge},
+    author={Bándi, Péter and Geessink, Oscar and Manson, Quirine and Van Dijk, Marcory and Balkenhol, Maschenka and Hermsen, Meyke and Ehteshami Bejnordi, Babak and Lee, Byungjae and Paeng, Kyunghyun and Zhong, Aoxiao and Li, Quanzheng and Zanjani, Farhad Ghazvinian and Zinger, Svitlana and Fukuta, Keisuke and Komura, Daisuke and Ovtcharov, Vlado and Cheng, Shenghua and Zeng, Shaoqun and Thagaard, Jeppe and Dahl, Anders B. and Lin, Huangjing and Chen, Hao and Jacobsson, Ludwig and Hedlund, Martin and Çetin, Melih and Halıcı, Eren and Jackson, Hunter and Chen, Richard and Both, Fabian and Franke, Jörg and Küsters-Vandevelde, Heidi and Vreuls, Willem and Bult, Peter and van Ginneken, Bram and van der Laak, Jeroen and Litjens, Geert},
+    journal={IEEE Transactions on Medical Imaging}, 
+    year={2019},
+    volume={38},
+    number={2},
+    pages={550-560},
+    doi={10.1109/TMI.2018.2867350}
+}
+```
+
+- **TCGA** (Source: [TCGA-UT](https://zenodo.org/records/5889558), License: CC-BY-NC-SA 4.0)
+```
+@article{komura22tcga-ut,
+    title = {Universal encoding of pan-cancer histology by deep texture representations},
+    author = {Daisuke Komura and Akihiro Kawabe and Keisuke Fukuta and Kyohei Sano and Toshikazu Umezaki and Hirotomo Koda and Ryohei Suzuki and Ken Tominaga and Mieko Ochi and Hiroki Konishi and Fumiya Masakado and Noriyuki Saito and Yasuyoshi Sato and Takumi Onoyama and Shu Nishida and Genta Furuya and Hiroto Katoh and Hiroharu Yamashita and Kazuhiro Kakimi and Yasuyuki Seto and Tetsuo Ushiku and Masashi Fukayama and Shumpei Ishikawa},
+    journal = {Cell Reports},
+    year = {2022},
+    volume = {38},
+    number = {9},
+    pages = {110424},
+    doi = {https://doi.org/10.1016/j.celrep.2022.110424}
+}
+```
+
+- **Tolkach ESCA** (Source: https://zenodo.org/records/7548828, License: CC-BY-SA 4.0)
+```
+@article{tolkach2023esca,
+    title={Artificial intelligence for tumour tissue detection and histological regression grading in oesophageal adenocarcinomas: a retrospective algorithm development and validation study},
+    author={Tolkach, Yuri and Wolgast, Lisa Marie and Damanakis, Alexander and Pryalukhin, Alexey and Schallenberg, Simon and Hulla, Wolfgang and Eich, Marie-Lisa and Schroeder, Wolfgang and Mukhopadhyay, Anirban and Fuchs, Moritz and others},
+    journal={The Lancet Digital Health},
+    year={2023},
+    volume={5},
+    number={5},
+    pages={e265--e275},
+    publisher={Elsevier}
+}
 ```
