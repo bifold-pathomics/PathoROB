@@ -24,8 +24,9 @@ def get_args():
         help="Name of foundation model (name of folder in feature_dir that holds the features of the model)."
     )
     parser.add_argument(
-        "--datasets", type=str, nargs="+", default=AVAILABLE_DATASETS,
-        help=f"PathoROB datasets on which the clustering score is computed. Available datasets: {AVAILABLE_DATASETS}."
+        "--datasets", type=str, nargs="+", default=None,
+        help=f"PathoROB datasets on which the clustering score is computed. If not specified, all datasets with "
+             f"extracted features from the given model will considered. Available datasets: {AVAILABLE_DATASETS}."
     )
     # optional
     parser.add_argument(
@@ -60,6 +61,10 @@ def get_args():
         "--num_trials", type=int, default=50,
         help="Optional. Number of repetitions to run the clustering (for calculating the average clustering score). Default: 50."
     )
+    parser.add_argument(
+        "--overwrite_results", action='store_true',
+        help="Recompute clustering results even if they already exist."
+    )
     return parser.parse_args()
 
 
@@ -74,6 +79,7 @@ def compute(
         maxK: int = 30,
         metric: str = "cosine",
         num_trials: int = 50,
+        overwrite_results: bool = False,
 ):
     ### CHECK ARGUMENTS FROM COMMAND LINE #########################################
     if (K is not None) and K<2:
@@ -88,6 +94,19 @@ def compute(
         raise ValueError(f"{num_trials} : Number of trials, num_trials, must be at least 1.")
     results_dir = Path(results_dir) / model / dataset
     Path(results_dir).mkdir(parents=True, exist_ok=True)
+    ###############################################################################
+
+    ### Check if results already exist ############################################
+    if (results_dir / "results_summary.json").exists() and not overwrite_results:
+        with open(results_dir / "results_summary.json", 'r') as f:
+            res_agg = json.load(f)
+        print(
+            f"Clustering score for model '{model}' on dataset '{dataset}' already computed: "
+            f"{np.round(res_agg['clustering_score_mean'], 5)} +- {np.round(res_agg['clustering_score_std'], 5)} "
+            f"(mean +- std.)"
+        )
+        print("To recompute, set '--overwrite_results'.")
+        return res_agg
     ###############################################################################
 
     ### PREPARE DATA LOADER #######################################################
@@ -213,13 +232,16 @@ def compute(
         f"{np.round(res_agg['clustering_score_mean'], 5)} +- {np.round(res_agg['clustering_score_std'], 5)} "
         f"(mean +- std.)"
     )
+    return res_agg
 
 
 def compute_all(args_dict):
     datasets = args_dict.pop('datasets')
+    if datasets is None:
+        datasets = FeatureDataManager(features_dir=args_dict["features_dir"]).get_available_datasets(args_dict["model"])
     print(f"Start clustering score calculation for model '{args_dict['model']}' on datasets: {datasets}.")
     for dataset in datasets:
-        compute(**args_dict, dataset=dataset)
+        _ = compute(**args_dict, dataset=dataset)
 
 
 if __name__ == '__main__':
