@@ -58,7 +58,7 @@ pip install -r requirements.txt
 ```
 
 > [!Note]
-> To ensure that the conda environment does not contain any user-specific site packages (e.g., from ~/.local/lib), run `export PYTHONNOUSERSITE=1` after activating your environment.
+> To ensure that the conda environment does not contain any user-specific site packages (e.g., from `~/.local/lib`), run `export PYTHONNOUSERSITE=1` after activating your environment.
 
 
 ### Feature extraction
