@@ -92,11 +92,11 @@ python3 -m pathorob.robustness_index.robustness_index \
 python3 -m pathorob.apd.apd --model uni2h_clsmean
 ```
 
-- Results: `results/apd`
+- Results: `results/apd` (see example results here)
    - `{model}/{dataset}_raw.json` per {dataset}:
       - In-/out-of-domain accuracies per split and trail.
    - `{model}/{dataset}_summary.json` per {dataset}:
-      - In-/out-of-domain APDs for the specific {dataset}.
+      - In-/out-of-domain APDs for the specific dataset.
       - In-/out-of-domain accuracy means per split averaged over trails.
    - `{model}/aggregated_summary.json`:
       - In-/out-of-domain APDs with 95% confidence intervals over all specified datasets.
@@ -108,7 +108,7 @@ python3 -m pathorob.apd.apd --model uni2h_clsmean
 python3 -m pathorob.clustering_score.clustering_score --model uni2h_clsmean
 ```
 
-- Results: `results/clustering_score`
+- Results: `results/clustering_score` (see example results here)
    - `{model}/{dataset}/results_summary.json`:
      - Summary of the results including the final clustering score. 
    - `{model}/{dataset}/aris.csv`:
