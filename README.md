@@ -67,6 +67,8 @@ pip install -r requirements.txt
 python3 -m pathorob.features.extract_features --model uni2h_clsmean --model_args '{"hf_token": "<TOKEN>"}'
 ```
 
+For feature extraction, raw image data (~100K images, ~2GB) will be downloaded from our [Hugging Face repository](https://huggingface.co/collections/bifold-pathomics/pathorob-6899f50a714f446d0c974f87). 
+
 - Results: `data/features/uni2h_clsmean`
 - Datasets: Per default, features for all PathoROB datasets will be extracted (`camelyon`, `tcga`, `tolkach_esca`). To select any subset of these, use `--datasets <dataset1> ...`.
 - Further arguments: `pathorob/features/extract_features.py`
