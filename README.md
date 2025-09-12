@@ -50,6 +50,8 @@ All results were computed as part of our benchmarking study. For details as well
 ### Installation
 
 ```shell
+git clone https://github.com/bifold-pathomics/PathoROB.git
+cd PathoROB
 conda create -n "pathorob" python=3.10 -y
 conda activate pathorob
 pip install -r requirements.txt
