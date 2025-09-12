@@ -84,10 +84,8 @@ python3 -m pathorob.robustness_index.robustness_index \
 
 #### (2) Average Performance Drop (APD)
 
-```
-python3 -m pathorob.apd.apd \
---model uni2h_clsmean \
---datasets { camelyon tcga tolkach_esca }
+```shell
+python3 -m pathorob.apd.apd --model uni2h_clsmean
 ```
 
 - Results: `results/apd`
