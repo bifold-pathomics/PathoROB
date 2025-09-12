@@ -198,7 +198,7 @@ If you have questions or feedback, please contact:
 
 If you find **PathoROB** useful, please cite our preprint:
 ```
-@article{komen2025pathorob,
+@article{koemen2025pathorob,
     title={Towards Robust Foundation Models for Digital Pathology},
     author={K{\"o}men, Jonah and de Jong, Edwin D and Hense, Julius and Marienwald, Hannah and Dippel, Jonas and Naumann, Philip and Marcus, Eric and Ruff, Lukas and Alber, Maximilian and Teuwen, Jonas and others},
     journal={arXiv preprint arXiv:2507.17845},
