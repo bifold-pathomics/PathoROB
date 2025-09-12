@@ -1,0 +1,11 @@
+{
+    "aggregation_datasets": [
+        "camelyon",
+        "tcga",
+        "tolkach_esca"
+    ],
+    "apd_id": -0.07437459069769618,
+    "ci_id": 0.008066200495538354,
+    "apd_ood": -0.05003284331638926,
+    "ci_ood": 0.007822495898394385
+}
