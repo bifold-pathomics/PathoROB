@@ -2,7 +2,7 @@
 
 [Preprint](https://arxiv.org/abs/2507.17845) | [Hugging Face](https://huggingface.co/collections/bifold-pathomics/pathorob-6899f50a714f446d0c974f87) |  [User Guide](#user-guide) | [Licenses](#licenses) | [Cite](#how-to-cite)
 
-**PathoROB is a benchmark for the robustness of pathology foundation models (FMs) to non-biological features.**
+**PathoROB is a benchmark for the robustness of pathology foundation models (FMs) to non-biological medical center differences.**
 
 ![PathoROB pipeline](docs/pathorob_pipeline.png)
 
@@ -86,10 +86,8 @@ python3 -m pathorob.robustness_index.robustness_index \
 
 #### (2) Average Performance Drop (APD)
 
-```
-python3 -m pathorob.apd.apd \
---model uni2h_clsmean \
---datasets { camelyon tcga tolkach_esca }
+```shell
+python3 -m pathorob.apd.apd --model uni2h_clsmean
 ```
 
 - Results: `results/apd`
@@ -200,11 +198,11 @@ If you have questions or feedback, please contact:
 
 If you find **PathoROB** useful, please cite our preprint:
 ```
-@article{komen2025pathorob,
-  title={Towards Robust Foundation Models for Digital Pathology},
-  author={K{\"o}men, Jonah and de Jong, Edwin D and Hense, Julius and Marienwald, Hannah and Dippel, Jonas and Naumann, Philip and Marcus, Eric and Ruff, Lukas and Alber, Maximilian and Teuwen, Jonas and others},
-  journal={arXiv preprint arXiv:2507.17845},
-  year={2025}
+@article{koemen2025pathorob,
+    title={Towards Robust Foundation Models for Digital Pathology},
+    author={K{\"o}men, Jonah and de Jong, Edwin D and Hense, Julius and Marienwald, Hannah and Dippel, Jonas and Naumann, Philip and Marcus, Eric and Ruff, Lukas and Alber, Maximilian and Teuwen, Jonas and others},
+    journal={arXiv preprint arXiv:2507.17845},
+    year={2025}
 }
 ```
 
