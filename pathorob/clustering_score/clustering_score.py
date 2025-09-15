@@ -102,7 +102,7 @@ def compute(
             res_agg = json.load(f)
         print(
             f"Clustering score for model '{model}' on dataset '{dataset}' already computed: "
-            f"{np.round(res_agg['clustering_score_mean'], 5)} +- {np.round(res_agg['clustering_score_std'], 5)} "
+            f"{np.round(res_agg['clustering_score_mean'], 5)} +- {np.round(res_agg['clustering_score_mean_std'], 5)} "
             f"(mean +- std.)"
         )
         print("To recompute, set '--overwrite_results'.")
@@ -150,6 +150,7 @@ def compute(
     # which then forms the data for one individual experiment
     all_combinations = list(product(combinations(bio_options, r=2), combinations(mc_options, r=2)))
     all_silhouette_scores, all_aris = pd.DataFrame(), pd.DataFrame()
+    sel_K = []
     print(f"Clustering score evaluation for model '{model}' on dataset '{dataset}' "
           f"for {len(all_combinations)} class combinations.", flush=True)
     for (bio1, bio2), (mc1, mc2) in tqdm(all_combinations):
@@ -186,23 +187,23 @@ def compute(
 
         ### SELECT K ##############################################################
         if K is None:
-            print("Compute optimal number of clusters via silhouette scores", flush=True)
             Ks = np.linspace(minK, maxK, maxK-minK+1, dtype=int)
             silhouette_scores = compute_silhouette_score_K(Z_norm, Ks, metric, 1337)
-            K  = Ks[np.argmax(silhouette_scores)]
-            print(f"... optimal number of clusters: [{minK}, {maxK}] -> K = {K}.", flush=True)
+            sel_K.append(int(Ks[np.argmax(silhouette_scores)]))
             res_df = pd.DataFrame(
                 data=zip([cc_str] * len(Ks), Ks, silhouette_scores),
                 columns=["combination", "K", "silhouette_score"],
             )
             all_silhouette_scores = pd.concat([all_silhouette_scores, res_df], axis=0, ignore_index=True)
+        else:
+            sel_K.append(K)
         ###########################################################################
 
         Aris = np.zeros([num_trials, 3])
-        for t in range(num_trials):
+        for t in tqdm(list(range(num_trials)), desc="Computing ARIs"):
             rnd_seed = 1337 + t
             ### CLUSTERING WITH OPT. K ################################################
-            kmeans = KMeans(n_clusters=K, random_state=rnd_seed, n_init=5, init='random').fit(Z_norm)
+            kmeans = KMeans(n_clusters=sel_K[-1], random_state=rnd_seed, n_init=5, init='random').fit(Z_norm)
             cluster_labels = kmeans.labels_
             ###########################################################################
 
@@ -219,9 +220,11 @@ def compute(
     all_silhouette_scores.to_csv(results_dir / "silhouette_scores.csv", index=False)
     all_aris.to_csv(results_dir / "aris.csv", index=False)
     res_agg = {
-        "clustering_score_mean": all_aris["clustering_score"].mean(),
-        "clustering_score_std": all_aris["clustering_score"].std(),
-        "K": int(K),
+        # Mean of the per combination means
+        "clustering_score_mean": all_aris.groupby("combination")["clustering_score"].mean().mean().item(),
+        # Mean of the per combination standard deviations
+        "clustering_score_mean_std": all_aris.groupby("combination")["clustering_score"].std().mean().item(),
+        "Ks": {"min": min(sel_K), "median": np.median(sel_K).item(), "max": max(sel_K)},
         "num_combinations": len(all_combinations),
         "num_trials": num_trials,
     }
@@ -229,7 +232,7 @@ def compute(
         json.dump(res_agg, f, indent=4)
     print(
         f"Clustering score for model '{model}' on dataset '{dataset}': "
-        f"{np.round(res_agg['clustering_score_mean'], 5)} +- {np.round(res_agg['clustering_score_std'], 5)} "
+        f"{np.round(res_agg['clustering_score_mean'], 5)} +- {np.round(res_agg['clustering_score_mean_std'], 5)} "
         f"(mean +- std.)"
     )
     return res_agg

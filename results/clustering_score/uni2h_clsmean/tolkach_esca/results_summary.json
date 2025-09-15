@@ -1,0 +1,11 @@
+{
+    "clustering_score_mean": 0.8652711175734653,
+    "clustering_score_mean_std": 0.007342663995523822,
+    "Ks": {
+        "min": 2,
+        "median": 2.0,
+        "max": 29
+    },
+    "num_combinations": 45,
+    "num_trials": 50
+}
