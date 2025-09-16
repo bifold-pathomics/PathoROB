@@ -13,9 +13,11 @@ import pathorob.robustness_index.robustness_graphs as robustness_graphs
 from pathorob.robustness_index.robustness_index_paired import calc_rob_index_pairs, \
     evaluate_model_pairs
 from pathorob.robustness_index.robustness_index_utils import (
-    aggregate_stats, save_total_stats, get_field_names_given_dataset, evaluate_knn_accuracy, get_k_values,
+    aggregate_stats, save_total_stats, get_field_names_given_dataset, evaluate_knn_accuracy,
+    get_k_values,
     save_balanced_accuracies, evaluate_embeddings, calculate_per_class_prediction_stats,
-    calculate_robustness_index_at_k_opt, get_model_colors, get_folder_paths, plot_results_per_model
+    calculate_robustness_index_at_k_opt, get_model_colors, get_folder_paths, plot_results_per_model,
+    OutputFiles
 )
 
 
@@ -49,7 +51,7 @@ def get_args():
     parser.add_argument('--max_patches_per_combi', type=int, default=-1, help='Maximum patches per combination. -1 for no limit, or a specific number to limit the dataset size.')
     parser.add_argument('--compute_bootstrapped_robustness_index', action='store_true', help='Compute bootstrapped robustness index.')
     parser.add_argument('--num_workers', type=int, default=8, help='Number of workers for parallel processing.')
-    parser.add_argument('--plot_graphs', type=str2bool, default=True, help='Whether to plot graphs.')
+    parser.add_argument('--plot_graphs', action='store_true', help='Plot graphs when flag is provided.')
     parser.add_argument('--debug_mode', action='store_true', help='Run in debug mode with limited data for faster testing.')
 
     return parser.parse_args()
@@ -139,12 +141,12 @@ def select_optimal_k_value(dataset, model, patch_names, embeddings, meta, result
     k_values_sel = [k for k in k_values_sel if k <= max_k]
     if opt_k and opt_k > 0:
         acc_score_bio, auc_per_class, knn_distances, knn_indices, effective_n_neighbors = evaluate_knn_accuracy(meta, dataset, X_train, X_test,
-                                                                                         y_train, y_test, k,
+                                                                                         y_train, y_test, opt_k,
                                                                                          num_workers, knn_distances,
                                                                                          knn_indices)
         acc_score_bio = float(acc_score_bio)
         accuracies_k_bio.append(acc_score_bio)
-        aucs_per_class[k] = auc_per_class
+        aucs_per_class[opt_k] = auc_per_class
     else:
         for k in k_values_sel[::-1]: #iterate over k values in reverse order to find the optimal k value
             t0 = time.time()
@@ -156,6 +158,7 @@ def select_optimal_k_value(dataset, model, patch_names, embeddings, meta, result
             print(f"select_optimal_k_value k {k} dt {dt:.2f}", flush=True)
         accuracies_k_bio = accuracies_k_bio[::-1]  # reverse back again to match the regular k_values_sel order
 
+    # TODO: error here when using fixed k
     index_max_bal_acc = np.argmax(accuracies_k_bio)
     opt_k = k_values_sel[index_max_bal_acc]
     print(f"opt-k {opt_k} max balanced accuracy {np.max(accuracies_k_bio):.4f} accuracies_k_bio {[f'{float(f):.3f}' for f in accuracies_k_bio]}", flush=True)
@@ -177,7 +180,7 @@ def select_optimal_k_value(dataset, model, patch_names, embeddings, meta, result
     total_stats = save_total_stats(total_stats, meta, dataset, model, results_folder, k_opt, bal_acc_at_k_opt)
     calculate_per_class_prediction_stats(biological_class_field, confounding_class_field, bio_classes, model, meta, aucs_per_class_list, k_opt, results_folder)
     if plot_graphs:
-        plot_results_per_model(meta, total_stats, accuracies_bio, k_values, model, results_folder, fig_folder, dataset,
+        plot_results_per_model(total_stats, k_values, model, fig_folder, dataset,
                                bio_class_prediction_result["bal_acc"], k_opt)
     return k_opt, bio_class_prediction_result, total_stats
 
@@ -264,7 +267,7 @@ def get_meta(data_manager, dataset, paired_evaluation):
 
 def get_bal_acc_values(model, options):
     results_folder = options["results_folder"]
-    fn = os.path.join(results_folder, f'bal-acc-bio-{model}.csv')  # get bal_acc for biological classification
+    fn = os.path.join(results_folder, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv')  # get bal_acc for biological classification
     if not os.path.isfile(fn):
         raise ValueError(f'missing bal_acc file {fn}')
     bal_accs_bio = pd.read_csv(fn)
@@ -278,6 +281,8 @@ def get_bal_acc_values(model, options):
     return bal_acc_values, k_opt
 
 
+# TODO: imo this function should only be run for multiple models?
+# TODO: separate to have 2 functions: returning data and plots
 def report_optimal_k(results_folder, fig_folder, models, options):
     print("Optimal k values")
 
@@ -289,7 +294,7 @@ def report_optimal_k(results_folder, fig_folder, models, options):
     max_bal_acc_values = []
     max_bal_acc_value = {}
     for m, model in enumerate(models):
-        fn = os.path.join(results_folder, f'bal-acc-bio-{model}.csv') #get bal_acc for biological classification
+        fn = os.path.join(results_folder, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv') #get bal_acc for biological classification
         if not os.path.isfile(fn):
             raise ValueError(f'missing accuracy file {fn}')
         bal_accs_bio = pd.read_csv(fn)
@@ -325,7 +330,7 @@ def report_optimal_k(results_folder, fig_folder, models, options):
     for m in range(len(models)):
             index = sortindex[m]
             model = models[index]
-            fn = os.path.join(results_folder, f'bal-acc-bio-{model}.csv')  # get bal_acc for biological classification
+            fn = os.path.join(results_folder, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv')  # get bal_acc for biological classification
             bal_accs_bio = pd.read_csv(fn)
             mis = np.isnan(bal_accs_bio.bal_acc.values)
             bal_accs_bio = bal_accs_bio[~mis]
@@ -359,10 +364,10 @@ def report_optimal_k(results_folder, fig_folder, models, options):
     fn = os.path.join(fig_folder, f'optimal-k-values-{model_str}.png')
     plt.savefig(fn, dpi=600)
     print(f"saved optimal k values to {fn}")
-    df_optimal_k = pd.DataFrame({'model': models, 'k_opt': opt_k_values, 'max_bal_acc': max_bal_acc_values})
-    fn = os.path.join(results_folder, f'optimal-k-values-{model_str}.csv')
-    df_optimal_k.to_csv(fn, index=False)
-    print(f"saved optimal k values to {fn}")
+    # df_optimal_k = pd.DataFrame({'model': models, 'k_opt': opt_k_values, 'max_bal_acc': max_bal_acc_values})
+    # fn = os.path.join(results_folder, f'optimal-k-values-{model_str}.csv')
+    # df_optimal_k.to_csv(fn, index=False)
+    # print(f"saved optimal k values to {fn}")
     return model_k_opt, model_bal_acc_values, max_bal_acc_value
 
 
@@ -450,10 +455,11 @@ def results_summary(meta, max_patches_per_combi, results_folder, model_k_opt, me
             result[model] = model_result
 
         print(result_string)
-        fn = os.path.join(results_folder, f'results-{model}.txt')
-        with open(fn,'w') as file:
-            file.write(result_string + "\n")
-        print(f"wrote result string to {fn}")
+        # TODO: why do we need this?
+        # fn = os.path.join(results_folder, f'results-{model}.txt')
+        # with open(fn,'w') as file:
+        #     file.write(result_string + "\n")
+        # print(f"wrote result string to {fn}")
         return result
 
 
@@ -501,6 +507,7 @@ def get_median_k_opt_given_dataset(dataset):
     return int(median_k_opt)
 
 
+# TODO: remove defaults
 def compute(
         model: str,
         dataset: str,
@@ -528,9 +535,14 @@ def compute(
         paired_evaluation = dataset == "tcga"
 
     options = {
-        "model": model, "max_patches_per_combi": max_patches_per_combi,
-        "k_opt_param": k_opt_param, "dataset": dataset, "results_dir": results_dir,
-        "figures_subdir": figures_subdir, "paired_evaluation": paired_evaluation, "metadata_dir": metadata_dir
+        "model": model,
+        "max_patches_per_combi": max_patches_per_combi,
+        "k_opt_param": k_opt_param,
+        "dataset": dataset,
+        "results_dir": results_dir,
+        "figures_subdir": figures_subdir,
+        "paired_evaluation": paired_evaluation,
+        "metadata_dir": metadata_dir
     }
 
     print("using these settings:")
@@ -561,37 +573,26 @@ def compute(
                                                       compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index,
                                                       DBG=DBG, plot_graphs=plot_graphs)
 
+    # TODO: only for multiple models?
     if k_opt_param == -1:
-        if plot_graphs:
-            model_k_opt, model_bal_acc_values, max_bal_acc_value = report_optimal_k(results_folder, fig_folder, models, options)
+        # if plot_graphs:
+        model_k_opt, model_bal_acc_values, max_bal_acc_value = report_optimal_k(results_folder, fig_folder, models, options)
         median_k_opt = get_median_k_opt_given_dataset(dataset)
-        print(f"dataset {dataset} found model k_opt {model_k_opt}  median k_opt: {median_k_opt:.2f}")
+        # print(f"dataset {dataset} found model k_opt {model_k_opt}  median k_opt: {median_k_opt:.2f}")
     else: #fixed k_opt_param
         print(f"using fixed k_opt_param {k_opt_param}")
         model_k_opt = {model: k_opt_param} #use specified value for all plots
         median_k_opt = k_opt_param
         model_bal_acc_values=None
 
+    # TODO: move to new entrypoint for models comparison
     if plot_graphs:
         robustness_metrics, robustness_index = plot_all_results(models, results_folder, fig_folder, model_k_opt, median_k_opt,
                                                                 dataset, options)
+
+        robustness_graphs.pareto_plot(dataset, models, model_bal_acc_values, robustness_metrics, fig_folder)
     else:
-        robustness_metrics = None
-
-    if k_opt_param == -1:
-        res = pd.DataFrame({'model': models, 'k_opt': [int(model_k_opt[m]) for m in models], 'bio_prediction_bal_acc': [max_bal_acc_value[m] for m in models]})
-        if not robustness_index is None:
-            res['robustness_index'] = [robustness_index[m] for m in models]
-        if len(models) == 1:
-            fn = os.path.join(results_folder, f'results-{dataset}-{models[0]}.csv')
-        else:
-            fn = os.path.join(results_folder, f'results-{dataset}-{len(models)}-models.csv')
-
-        res.to_csv(fn, index=False)
-        print(f"saved results to {fn}")
-
-        if not robustness_metrics is None:
-            robustness_graphs.pareto_plot(dataset, models, model_bal_acc_values, robustness_metrics, fig_folder)
+        robustness_metrics, robustness_index = None, None
 
     t_end_calc = time.time()
     dt = t_end_calc - t_start
@@ -599,7 +600,6 @@ def compute(
 
     if results:
         result = results_summary(meta, max_patches_per_combi, results_folder, model_k_opt, median_k_opt, model_bal_acc_values, robustness_metrics, results, dt)
-        #dict with metric dict per model
         print("final result", result)
 
     return robustness_metrics_dict
@@ -611,6 +611,8 @@ def compute_all(args_dict):
     for dataset in datasets:
         compute(**args_dict, dataset=dataset)
 
+
+# TODO add new entrypoint for models comparison
 
 if __name__ == '__main__':
     compute_all(vars(get_args()))

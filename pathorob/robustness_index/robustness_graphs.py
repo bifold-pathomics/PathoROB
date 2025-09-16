@@ -9,7 +9,7 @@ from pathorob.robustness_index.robustness_index_utils import (
     aggregate_per_combi, calculate_robustness_index_at_k_opt, get_robustness_index_k_range,
     get_optimal_prediction_results_avg_all_datasets, get_optimal_prediction_results_per_dataset,
     get_robustness_results_median_k_opt_per_dataset, get_robustness_results_all_datasets,
-    get_robustness_results_per_dataset, get_model_colors
+    get_robustness_results_per_dataset, get_model_colors, OutputFiles
 )
 
 
@@ -700,7 +700,7 @@ def plot11_performance_robustness_tradeoff(models, options, results_folder, fig_
         fig, ax1 = plt.subplots(figsize=(10, 6))
         ax2 = ax1.twinx()
 
-        fn = os.path.join(results_folder, f'bal-acc-bio-{model}.csv')  # get bal_acc for biological classification
+        fn = os.path.join(results_folder, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv')  # get bal_acc for biological classification
         if not os.path.exists(fn):
             print(f"File {fn} does not exist, skipping model {model}")
             continue

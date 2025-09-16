@@ -2,6 +2,7 @@ import copy
 import json
 import os
 import pickle
+from enum import StrEnum
 from pathlib import Path
 
 import numpy as np
@@ -10,6 +11,11 @@ from matplotlib import pyplot as plt
 from sklearn.metrics import roc_auc_score, balanced_accuracy_score
 from sklearn.neighbors import KNeighborsClassifier
 from scipy.stats import mode
+
+class OutputFiles(StrEnum):
+    SUMMARY_FILE = "results_summary.json"
+    BALANCED_ACCURACY = "bal-acc-bio"
+    FREQUENCIES = "frequencies-same-class"
 
 
 def bootstrapped_robustness_index(SO_cum, OS_cum, n_bootstrap = 1000):
@@ -605,13 +611,13 @@ def save_total_stats(stats, meta, dataset, model, results_folder, k_opt, bal_acc
     all_bio_classes = np.unique(meta[biological_class_field].values)
     all_conf_classes = np.unique(meta[confounding_class_field].values)
 
-    fn = os.path.join(results_folder, f'frequencies-same-class-{model}.pkl')
+    fn = os.path.join(results_folder, f'{OutputFiles.FREQUENCIES}-{model}.pkl')
     with open(fn, 'wb') as f:
         pickle.dump({'stats': stats, 'all_bio_classes': all_bio_classes, 'all_conf_classes': all_conf_classes}, f)
     print(f'saved results to {fn}')
 
     # Store summary file
-    output_file = os.path.join(results_folder, f'results_summary.json')
+    output_file = os.path.join(results_folder, OutputFiles.SUMMARY_FILE)
     df_dict = convert_types_in_stats(df_dict)
     with open(output_file, 'w') as f:
         json.dump(df_dict, f, indent=4)
@@ -624,50 +630,17 @@ def plot_3a_optimal_k_per_model(model, k_values_sel, bal_accs, k_opt, fig_folder
     plt.xlabel("k")
     plt.ylabel("Balanced accuracy")
     plt.title(f"Balanced accuracy vs k value for {model}\nOptimal k: {k_opt}")
-    fn = os.path.join(fig_folder, f'3a-optimal-k-{model}.png')
+    fn = os.path.join(fig_folder, f'3a-optimal-k.png')
     plt.savefig(fn, dpi=600)
     print(f"saved optimal k to {fn}")
     plt.close()
 
-def plot_results_per_model(meta, total_stats, accuracies_bio, k_values, model, results_folder, fig_folder, dataset, bal_accs, k_opt):
-    plot_3_optimal_k_per_model(accuracies_bio, k_values, model, results_folder, fig_folder)
+
+def plot_results_per_model(total_stats, k_values, model, fig_folder, dataset, bal_accs, k_opt):
+    plot_3a_optimal_k_per_model(model, k_values, bal_accs, k_opt, fig_folder)
     plot_4a_freq_4_combinations_per_model(total_stats, fig_folder, dataset, model)
     plot_4b_freq_4_combinations_per_model_cum(total_stats, fig_folder, dataset, model)
     plot_4d_freq_2_combinations_per_model(total_stats, fig_folder, dataset, model)
-    plot_3a_optimal_k_per_model(model, k_values, bal_accs, k_opt, fig_folder)
-
-def plot_3_optimal_k_per_model(accuracies_bio, k_values, model, results_folder, fig_folder):
-
-    print(f"scores nr rows: {len(accuracies_bio)} len {len(accuracies_bio[0])}")
-    min_row_length = np.min([len(row) for row in accuracies_bio])
-    accuracies_bio_list = [row[:min_row_length] for row in accuracies_bio]
-    k_values_sel = k_values[:min_row_length]
-
-    accuracies_bio = np.vstack(accuracies_bio_list)
-    avg_acc_bio = np.mean(accuracies_bio, axis=0)
-    std_acc_bio = np.std(accuracies_bio, axis=0)
-
-    res = pd.DataFrame({"k": k_values_sel, "bal_acc": avg_acc_bio, "std": std_acc_bio})
-    fn = os.path.join(results_folder, f'bal-acc-bio-{model}.csv')
-    res.to_csv(fn, index=False)
-    print(f'saved accuracies to {fn}', flush=True)
-
-    index_opt_k = np.argmax(avg_acc_bio)
-    k_opt = k_values_sel[index_opt_k]
-    print(f"optimal k for model {model}: {k_opt}")
-
-    print(f"optimal k for model {model}: {k_opt}")
-    plt.plot(k_values_sel, avg_acc_bio)
-    plt.fill_between(k_values_sel, avg_acc_bio - std_acc_bio, avg_acc_bio + std_acc_bio, alpha=0.2)
-    plt.xlabel("k")
-    plt.ylabel("Balanced Accuracy")
-    plt.title(f"Balanced Accuracy vs k value for {model}\nOptimal k: {k_opt}")
-    fn = os.path.join(fig_folder, f'3-optimal-k-{model}.png')
-    plt.savefig(fn, dpi=600)
-    print(f"saved optimal k to {fn}")
-    plt.close()
-    return k_opt, res
-
 
 
 def plot_4a_freq_4_combinations_per_model(stats, fig_folder, dataset, model):
@@ -680,13 +653,13 @@ def plot_4a_freq_4_combinations_per_model(stats, fig_folder, dataset, model):
     plt.ylim([0,1])
     plt.title(f"Frequency of same / other biological / confounding class\n{dataset} {model}")
     plt.savefig('/tmp/stats-all-frequencies.png')
-    fn = os.path.join(fig_folder, f'4a-freq-4-combinations-knn-neighbor-k-{dataset}-{model}.png')
+    fn = os.path.join(fig_folder, f'4a-freq-4-combinations-knn-neighbor-k.png')
     plt.savefig(fn, dpi=600)
     print(f"saved frequencies 4 combinations plot to {fn}", flush=True)
 
     res = {f'fraction_{combi}-norm': stats[f'fraction_{combi}-norm'] for combi in ['SS', 'SO', 'OS', 'OO']}
     df = pd.DataFrame(res)
-    fn = os.path.join(fig_folder, f'4a-freq-4-combinations-knn-neighbor-k-{dataset}-{model}.csv')
+    fn = os.path.join(fig_folder, f'4a-freq-4-combinations-knn-neighbor-k.csv')
     df.to_csv(fn, index=False)
     print(f"saved frequencies 4 combinations df to {fn}", flush=True)
 
@@ -703,13 +676,13 @@ def plot_4b_freq_4_combinations_per_model_cum(stats, fig_folder, dataset, model)
     plt.ylim([0,1])
     plt.title(f"Frequency of same / other biological / confounding class\n{dataset} {model}")
     plt.savefig('/tmp/stats-all-frequencies.png')
-    fn = os.path.join(fig_folder, f'4b-freq-4-combinations-knn-neighbor-k-sum-{dataset}-{model}.png')
+    fn = os.path.join(fig_folder, f'4b-freq-4-combinations-knn-neighbor-k-sum.png')
     plt.savefig(fn, dpi=600)
     print(f"saved frequencies 4 combinations plot to {fn}", flush=True)
 
     res = {f'fraction_{combi}-cum-norm': stats[f'fraction_{combi}-cum-norm'] for combi in ['SS', 'SO', 'OS', 'OO']}
     df = pd.DataFrame(res)
-    fn = os.path.join(fig_folder, f'4b-freq-4-combinations-knn-{dataset}-{model}.csv')
+    fn = os.path.join(fig_folder, f'4b-freq-4-combinations-knn.csv')
     df.to_csv(fn, index=False)
     print(f"saved frequencies 4 combinations df to {fn}", flush=True)
 
@@ -755,7 +728,7 @@ def plot_4d_freq_2_combinations_per_model(stats, fig_folder, dataset, model):
     plt.ylim([0,1])
     plt.legend()
     plt.title(f"Normalized frequency of same / other biological / confounding class\n{dataset} {model}")
-    fn = os.path.join(fig_folder, f'4e-freq-2-combinations-knn-neighbor-k-{dataset}-{model}-std.png')
+    fn = os.path.join(fig_folder, f'4e-freq-2-combinations-knn-neighbor-k-std.png')
     plt.savefig(fn, dpi=600)
     print(f"saved frequencies 2 combinations plot org with std to {fn}", flush=True)
     plt.close()
@@ -766,7 +739,7 @@ def plot_4d_freq_2_combinations_per_model(stats, fig_folder, dataset, model):
         res["robustness_index-mean"] = stats['robustness_index-mean']
         res["robustness_index-std"] = stats['robustness_index-std']
     df = pd.DataFrame(res)
-    fn = os.path.join(fig_folder, f'4e-freq-2-combinations-knn-neighbor-k-{dataset}-{model}-std.csv')
+    fn = os.path.join(fig_folder, f'4e-freq-2-combinations-knn-neighbor-k-std.csv')
     df.to_csv(fn, index=False)
     print(f"saved frequencies 2 combinations with std df to {fn}", flush=True)
 
@@ -791,6 +764,7 @@ def calculate_per_class_prediction_stats(biological_class_field, confounding_cla
     df.to_csv(fn, index=False)
     print(f'saved aucs per class to {fn}', flush=True)
 
+
 def save_balanced_accuracies(model, accuracies_bio, k_values, results_folder):
     print(f"accuracies_bio nr rows: {len(accuracies_bio)} len {len(accuracies_bio[0])}")
     min_row_length = np.min([len(row) for row in accuracies_bio])
@@ -805,7 +779,7 @@ def save_balanced_accuracies(model, accuracies_bio, k_values, results_folder):
     bal_accs = np.mean(accuracies_bio, axis=0)
     stds = np.std(accuracies_bio, axis=0)
     bio_class_prediction_result = pd.DataFrame({"k": k_values, "bal_acc": bal_accs, "std": stds})
-    fn = os.path.join(results_folder, f'bal-acc-bio-{model}.csv')
+    fn = os.path.join(results_folder, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv')
     bio_class_prediction_result.to_csv(fn, index=False)
     print(f'saved bal_accs to {fn}', flush=True)
 
@@ -871,7 +845,7 @@ def get_optimal_prediction_results_avg_all_datasets(datasets, models, options):
         for dataset in datasets:
             options_ds = get_default_dataset_options(dataset, options)
             results_folder_ds = options_ds["results_folder"]
-            fn = os.path.join(results_folder_ds, f'bal-acc-bio-{model}.csv') #get bal_acc for biological classification
+            fn = os.path.join(results_folder_ds, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv') #get bal_acc for biological classification
             if not os.path.isfile(fn):
                 raise ValueError(f'missing bal_acc file {fn}')
             bal_accs_bio = pd.read_csv(fn)
@@ -909,7 +883,7 @@ def get_optimal_prediction_results_per_dataset(datasets, models, options):
         for dataset in datasets:
             options_ds = get_default_dataset_options(dataset, options)
             results_folder_ds = options_ds["results_folder"]
-            fn = os.path.join(results_folder_ds, f'bal-acc-bio-{model}.csv') #get bal_acc for biological classification
+            fn = os.path.join(results_folder_ds, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv') #get bal_acc for biological classification
             if not os.path.isfile(fn):
                 raise ValueError(f'missing bal_acc file {fn}')
             bal_accs_bio = pd.read_csv(fn)

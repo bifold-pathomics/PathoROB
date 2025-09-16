@@ -86,7 +86,7 @@ def select_optimal_k_value_pairs(dataset, model, patch_names, embeddings, meta, 
     total_stats = save_total_stats(total_stats, meta, dataset, model, results_folder, k_opt, bal_acc_at_k_opt)
     calculate_per_class_prediction_stats(biological_class_field, confounding_class_field, bio_classes, model, meta, aucs_per_class_list, k_opt, results_folder)
     if plot_graphs:
-        plot_results_per_model(meta, total_stats, accuracies_bio, effective_k_values, model, results_folder, fig_folder, dataset,
+        plot_results_per_model(total_stats, effective_k_values, model, fig_folder, dataset,
                                bio_class_prediction_result["bal_acc"], k_opt)
     return k_opt, bio_class_prediction_result, total_stats
 
