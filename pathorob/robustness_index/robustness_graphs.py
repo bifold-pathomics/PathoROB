@@ -59,7 +59,7 @@ def plot_results(model, results_folder, fig_folder, model_k_opt):
     plt.xlabel("k")
     plt.ylabel("Robustness index")
     plt.tight_layout(pad=2)  # Adds padding around the plot
-    fn=os.path.join(fig_folder,f'1-robustness-index-per-bio-class-{model}.png')
+    fn=os.path.join(fig_folder,f'1-robustness-index-per-bio-class.png')
     plt.savefig(fn, dpi=600)
     print(f"saved robustness index per bio class to {fn}")
     plt.close()
@@ -98,7 +98,7 @@ def plot_results(model, results_folder, fig_folder, model_k_opt):
     plt.title(f"Robustness index per confounding class for {model}")
     plt.xlabel("k")
     plt.ylabel("Robustness index")
-    fn = os.path.join(fig_folder,f'2-robustness-index-per-conf-class-{model}.png')
+    fn = os.path.join(fig_folder,f'2-robustness-index-per-conf-class.png')
     plt.savefig(fn, dpi=600)
     print(f"saved robustness index per conf class to {fn}")
     plt.close()
@@ -116,8 +116,8 @@ def plot_results(model, results_folder, fig_folder, model_k_opt):
     plt.gcf().set_size_inches(10, 6)
     plt.xlabel("k")
     plt.ylabel("Robustness index")
-    plt.savefig(os.path.join(fig_folder,f'3-robustness-index-{model}.png'), dpi=600)
-    print(f"saved robustness index to {os.path.join(fig_folder,f'3-robustness-index-{model}.png')}")
+    plt.savefig(os.path.join(fig_folder,f'3-robustness-index.png'), dpi=600)
+    print(f"saved robustness index to {os.path.join(fig_folder,f'3-robustness-index.png')}")
     plt.close()
 
 
@@ -135,11 +135,10 @@ def plot_results(model, results_folder, fig_folder, model_k_opt):
     plt.title(f"Frequency of same class for neighbor k\n{model}")
     plt.xlabel("k")
     plt.ylabel("Frequency")
-    plt.savefig(os.path.join(fig_folder,f'4-freq-same-bio-conf-class-neighbor-k-{model}-no-legend.png'), dpi=600)
     plt.legend()
     plt.tight_layout()
-    plt.savefig(os.path.join(fig_folder,f'4-freq-same-bio-conf-class-neighbor-k-{model}.png'), dpi=600)
-    print(f"saved frequency of same class to {os.path.join(fig_folder,f'4-freq-same-bio-conf-class-neighbor-k-{model}.png')}")
+    plt.savefig(os.path.join(fig_folder,f'4-freq-same-bio-conf-class-neighbor-k.png'), dpi=600)
+    print(f"saved frequency of same class to {os.path.join(fig_folder,f'4-freq-same-bio-conf-class-neighbor-k.png')}")
     plt.close()
 
     plt.figure(figsize = (10, 6))
@@ -157,8 +156,8 @@ def plot_results(model, results_folder, fig_folder, model_k_opt):
     plt.xlabel("k")
     plt.ylabel("Frequency")
     plt.tight_layout()
-    plt.savefig(os.path.join(fig_folder,f'5-freq-same-bio-conf-class-knn-{model}.png'), dpi=600)
-    print(f"saved frequency of same class to {os.path.join(fig_folder,f'5-freq-same-bio-conf-class-knn-{model}.png')}")
+    plt.savefig(os.path.join(fig_folder,f'5-freq-same-bio-conf-class-knn.png'), dpi=600)
+    print(f"saved frequency of same class to {os.path.join(fig_folder,f'5-freq-same-bio-conf-class-knn.png')}")
     plt.close()
 
 
