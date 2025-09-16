@@ -371,7 +371,7 @@ def report_optimal_k(results_folder, fig_folder, models, options):
     return model_k_opt, model_bal_acc_values, max_bal_acc_value
 
 
-def reduce_dataset(results_folder, dataset, meta, max_patches_per_combi):
+def reduce_dataset(meta, max_patches_per_combi):
     np.random.seed(123)  # always use same fixed seed on purpose here for reproducibility
     meta = meta.sample(frac=1).reset_index(drop=True)
     meta["bio_conf_combi"] = meta["biological_class"] + "-" + meta["medical_center"]
@@ -379,17 +379,12 @@ def reduce_dataset(results_folder, dataset, meta, max_patches_per_combi):
         nr_org = len(meta)
         meta = meta.groupby(["subset", "bio_conf_combi"]).head(max_patches_per_combi).reset_index(drop=True)
         print(f"reduced dataset to {max_patches_per_combi} patches per combination from {nr_org} to {len(meta)}")
-    fn = os.path.join(results_folder, f'meta-reduced-{dataset}.csv')
-    meta.to_csv(fn, index=False)
-    print(f"saved reduced meta to {fn}")
     return meta
 
 
 def results_summary(meta, max_patches_per_combi, results_folder, model_k_opt, median_k_opt, model_bal_acc_values, model_robustness_index, results, dt):
     nr_patches = len(meta)
     result = {}
-
-    # print(results)
 
     print(f"results_summary: models in results: {list(results.keys())}")
     models = results.keys()
@@ -455,11 +450,6 @@ def results_summary(meta, max_patches_per_combi, results_folder, model_k_opt, me
             result[model] = model_result
 
         print(result_string)
-        # TODO: why do we need this?
-        # fn = os.path.join(results_folder, f'results-{model}.txt')
-        # with open(fn,'w') as file:
-        #     file.write(result_string + "\n")
-        # print(f"wrote result string to {fn}")
         return result
 
 
@@ -559,7 +549,7 @@ def compute(
 
     data_manager = FeatureDataManager(features_dir=features_dir, metadata_dir=metadata_dir)
     meta = get_meta(data_manager, dataset, options["paired_evaluation"])
-    meta = reduce_dataset(results_folder, dataset, meta, max_patches_per_combi=max_patches_per_combi)
+    meta = reduce_dataset(meta, max_patches_per_combi=max_patches_per_combi)
 
     # if options["paired_evaluation"]: #calculate robustness index for pairs of 2 bio classes and 2 confounding classes
     #     robustness_metrics_dict, results = calc_rob_index_pairs(data_manager, models, dataset, meta, results_folder, fig_folder, num_workers=num_workers, k_opt_param=k_opt_param, DBG=DBG, compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, plot_graphs=plot_graphs)
@@ -574,33 +564,33 @@ def compute(
                                                       DBG=DBG, plot_graphs=plot_graphs)
 
     # TODO: only for multiple models?
-    if k_opt_param == -1:
-        # if plot_graphs:
-        model_k_opt, model_bal_acc_values, max_bal_acc_value = report_optimal_k(results_folder, fig_folder, models, options)
-        median_k_opt = get_median_k_opt_given_dataset(dataset)
-        # print(f"dataset {dataset} found model k_opt {model_k_opt}  median k_opt: {median_k_opt:.2f}")
-    else: #fixed k_opt_param
-        print(f"using fixed k_opt_param {k_opt_param}")
-        model_k_opt = {model: k_opt_param} #use specified value for all plots
-        median_k_opt = k_opt_param
-        model_bal_acc_values=None
-
-    # TODO: move to new entrypoint for models comparison
-    if plot_graphs:
-        robustness_metrics, robustness_index = plot_all_results(models, results_folder, fig_folder, model_k_opt, median_k_opt,
-                                                                dataset, options)
-
-        robustness_graphs.pareto_plot(dataset, models, model_bal_acc_values, robustness_metrics, fig_folder)
-    else:
-        robustness_metrics, robustness_index = None, None
-
+    # if k_opt_param == -1:
+    #     # if plot_graphs:
+    #     model_k_opt, model_bal_acc_values, max_bal_acc_value = report_optimal_k(results_folder, fig_folder, models, options)
+    #     median_k_opt = get_median_k_opt_given_dataset(dataset)
+    #     # print(f"dataset {dataset} found model k_opt {model_k_opt}  median k_opt: {median_k_opt:.2f}")
+    # else: #fixed k_opt_param
+    #     print(f"using fixed k_opt_param {k_opt_param}")
+    #     model_k_opt = {model: k_opt_param} #use specified value for all plots
+    #     median_k_opt = k_opt_param
+    #     model_bal_acc_values=None
+    #
+    # # TODO: move to new entrypoint for models comparison
+    # if plot_graphs:
+    #     robustness_metrics, robustness_index = plot_all_results(models, results_folder, fig_folder, model_k_opt, median_k_opt,
+    #                                                             dataset, options)
+    #
+    #     robustness_graphs.pareto_plot(dataset, models, model_bal_acc_values, robustness_metrics, fig_folder)
+    # else:
+    #     robustness_metrics, robustness_index = None, None
+    #
     t_end_calc = time.time()
     dt = t_end_calc - t_start
     print(f"calculation time {dt:.2f} seconds = {dt/60:.2f} minutes = {dt/3600:.2f} hours")
 
-    if results:
-        result = results_summary(meta, max_patches_per_combi, results_folder, model_k_opt, median_k_opt, model_bal_acc_values, robustness_metrics, results, dt)
-        print("final result", result)
+    # if results:
+    #     result = results_summary(meta, max_patches_per_combi, results_folder, model_k_opt, median_k_opt, model_bal_acc_values, robustness_metrics, results, dt)
+    #     print("final result", result)
 
     return robustness_metrics_dict
 
