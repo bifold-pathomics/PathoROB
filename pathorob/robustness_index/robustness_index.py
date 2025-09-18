@@ -384,75 +384,43 @@ def reduce_dataset(meta, max_patches_per_combi):
     return meta
 
 
-def results_summary(meta, max_patches_per_combi, results_folder, model_k_opt, median_k_opt, model_bal_acc_values, model_robustness_index, results, dt):
+def results_summary(meta, max_patches_per_combi, results_folder, model_k_opt, median_k_opt, results, dt):
     nr_patches = len(meta)
     result = {}
 
-    print(f"results_summary: models in results: {list(results.keys())}")
     models = results.keys()
-    if not model_robustness_index:
-        k_opt_used, rob_index_at_k_opt = calculate_robustness_index_at_k_opt(models, results_folder, model_k_opt)
-        median_k_opt_used, rob_index_at_median_k_opt = calculate_robustness_index_at_k_opt(models, results_folder, median_k_opt)
+    print(f"results_summary {models}")
 
     for model in models:
-        if results[model] is None:
-            k_opt = int(model_k_opt[model])
-            if not model_robustness_index is None and model in model_robustness_index:
-                k_opt_index = k_opt - 1
-                if k_opt_index > len(model_robustness_index[model]) - 1:
-                    print(
-                        f"found k_opt {k_opt} earlier, but reducing to highest available value: {len(model_robustness_index[model]) - 1} ")
-                    k_opt_index = len(model_robustness_index[model]) - 1  # use last available k
-                robustness_index = model_robustness_index[model][k_opt_index]
-            else:
-                robustness_index = -1
-            result_string = (
-                f"final result max-patches-per-combi {max_patches_per_combi} "
-                f"model {model} nr-patches {nr_patches} k_opt {model_k_opt[model]} {k_opt} "
-                f"bal_acc {-1} {-1} std {-1} "
-                f"robustness index {robustness_index:.3f}"
-                f" runtime {dt:.2f} sec, {dt / 60.0:.2f} min")
+        model_bal_acc = results[model]["bal_acc_at_k_opt"]
+        bal_acc = np.max(model_bal_acc)
+        model_k_opt = results[model]["k_opt"]
+        index_k_opt_full = model_k_opt - 1 #index in full range 1..k_max
+
+        rob_index_k_opt = results[model]['robustness_index'][index_k_opt_full]
+        model_rob_index_mean = results[model]['robustness_index-mean']
+        model_rob_index_std = results[model]['robustness_index-std']
+        print(f"model_k_opt {model_k_opt}  median_k_opt {median_k_opt}")
+        bootstrapping_avail = len(model_rob_index_mean) > 1
+
+        if bootstrapping_avail:
+            mean_std_str = f"robustness_index mean {model_rob_index_mean[index_k_opt_full]:.3f}  std {model_rob_index_std[index_k_opt_full]:.3f}"
+            mean_std_str_median = f"robustness_index mean {model_rob_index_mean[index_median_k_opt]:.3f} std {model_rob_index_std[index_median_k_opt]:.3f}"
         else:
-            model_bal_acc = results[model]["bal_acc_at_k_opt"]
-            if model_bal_acc_values:
-                bal_acc = np.max(model_bal_acc_values[model].bal_acc.values)
-            else:
-                bal_acc = -1
-            model_k_opt = results[model]["k_opt"]
-            index_k_opt_full = model_k_opt - 1 #index in full range 1..k_max
-            if model_robustness_index:
-                model_rob_index = model_robustness_index[model]
-                model_rob_index_at_k_opt = model_rob_index[index_k_opt_full]
-                model_rob_index_mean = model_robustness_index[model+"-mean"]
-                model_rob_index_std = model_robustness_index[model+"-std"]
-                index_median_k_opt = min(len(model_rob_index)-1, median_k_opt - 1)
-                print(f"model_k_opt {model_k_opt}  median_k_opt {median_k_opt}")
-                bootstrapping_avail = len(model_rob_index_mean) > 1
-                rob_index_k_opt, rob_index_k_opt_median = model_rob_index_at_k_opt, model_rob_index[index_median_k_opt]
-            else:
-                bootstrapping_avail = False
-                rob_index_k_opt, rob_index_k_opt_median = rob_index_at_k_opt[model], rob_index_at_median_k_opt[model]
+            mean_std_str = f"robustness_index mean -1 std -1"
+            mean_std_str_median = "robustness_index mean -1 std -1"
 
+        result_string = (f"final result max-patches-per-combi {max_patches_per_combi} "
+                         f"model {model} nr-patches {nr_patches} "
+                         f"model k_opt {model_k_opt} robustness_index {rob_index_k_opt :.3f} {mean_std_str} "
+                         f"bal_acc {bal_acc:.3f} {model_bal_acc:.3f} "                                 
+                         f" runtime {dt:.2f} sec, {dt/60.0:.2f} min")
 
-            if bootstrapping_avail:
-                mean_std_str = f"robustness_index mean {model_rob_index_mean[index_k_opt_full]:.3f}  std {model_rob_index_std[index_k_opt_full]:.3f}"
-                mean_std_str_median = f"robustness_index mean {model_rob_index_mean[index_median_k_opt]:.3f} std {model_rob_index_std[index_median_k_opt]:.3f}"
-            else:
-                mean_std_str = f"robustness_index mean -1 std -1"
-                mean_std_str_median = "robustness_index mean -1 std -1"
-
-            result_string = (f"final result max-patches-per-combi {max_patches_per_combi} "
-                             f"model {model} nr-patches {nr_patches} "
-                             f"model k_opt {model_k_opt} robustness_index {rob_index_k_opt :.3f} {mean_std_str} "
-                             f"median k_opt {median_k_opt} robustness_index {rob_index_k_opt_median:.3f} {mean_std_str_median} "
-                             f"bal_acc {bal_acc:.3f} {model_bal_acc:.3f} "                                 
-                             f" runtime {dt:.2f} sec, {dt/60.0:.2f} min")
-
-            model_result = {"model": model, "median_k_opt": median_k_opt, "robustness_index_at_median_k_opt": rob_index_k_opt_median, "balanced_accuracy": bal_acc}
-            result[model] = model_result
+        model_result = {"model": model, "median_k_opt": median_k_opt, "balanced_accuracy": bal_acc}
+        result[model] = model_result
 
         print(result_string)
-        return result
+    return result
 
 
 def plot_all_results(models, results_folder, fig_folder, model_k_opt, median_k_opt, dataset, options, options_subfolder):
@@ -555,10 +523,11 @@ def compute(
         k_opt = results[model]['k_opt'] if k_opt_param == -1 else k_opt_param
         robustness_graphs.plot_results(model, results_folder, fig_folder, k_opt)
 
-    # TODO: print a summary of the results here like the following but with less info
-    # if results:
-    #     result = results_summary(meta, max_patches_per_combi, results_folder, model_k_opt, median_k_opt, model_bal_acc_values, robustness_metrics, results, dt)
-    #     print("final result", result)
+
+    if results:
+        median_k_opt = get_median_k_opt_given_dataset(dataset)
+        result = results_summary(meta, max_patches_per_combi, results_folder, k_opt, median_k_opt, results, dt)
+        print("final result", result)
 
     return robustness_metrics_dict
 
