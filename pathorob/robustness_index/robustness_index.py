@@ -17,7 +17,7 @@ from pathorob.robustness_index.robustness_index_utils import (
     get_k_values,
     save_balanced_accuracies, evaluate_embeddings, calculate_per_class_prediction_stats,
     calculate_robustness_index_at_k_opt, get_model_colors, get_folder_paths, plot_results_per_model,
-    OutputFiles
+    OutputFiles, get_model_names, get_generic_folder_paths, get_file_path
 )
 
 
@@ -35,8 +35,12 @@ def str2bool(v):
 def get_args():
     parser = argparse.ArgumentParser(description='Calculate robustness index for a given dataset and model.')
 
+    parser.add_argument('--mode', type=str, choices=['compute', 'compare'], default='compute',
+                        help='Mode to run: "compute" to calculate robustness index for a single model, '
+                             '"compare" to compare multiple models, requires robustness index computed for all models.')
+
     #required parameters
-    parser.add_argument('--model', type=str, help='Model name')
+    parser.add_argument('--model', type=str, nargs="+", help='Model name.')
     parser.add_argument(
         "--dataset", type=str, nargs="+", default=AVAILABLE_DATASETS,
         help=f"PathoROB datasets on which the robustness index is computed. Available datasets: {AVAILABLE_DATASETS}."
@@ -212,12 +216,12 @@ def evaluate_model(
     return bio_class_prediction_results, robustness_metrics_dict
 
 
-def calc_rob_index(data_manager, models, dataset, meta, results_folder, fig_folder, num_workers=8, k_opt_param=-1, compute_bootstrapped_robustness_index=False, DBG=False, plot_graphs=True):
+def calc_rob_index(data_manager, models, dataset, meta, results_folder, fig_folder, num_workers=8, k_opt_param=-1, compute_bootstrapped_robustness_index=False, DBG=False, plot_graphs=True, options_subfolder=None):
     results = {}
     robustness_metrics_dict = {}
     for m,model in enumerate(models):
         print(f"processing model {m+1}/{len(models)}: {model}")
-        fn = os.path.join(results_folder, f'frequencies-same-class-{model}.pkl')
+        get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.FREQUENCIES}-{model}.pkl')
         if os.path.exists(fn):
             print(f"model {model}: results already exist --> skipping. Found {fn}")
             continue
@@ -230,7 +234,7 @@ def calc_rob_index_model(paired_eval, data_manager, model, dataset, meta, result
     results = {}
     robustness_metrics_dict = {}
 
-    # fn = os.path.join(results_folder, f'frequencies-same-class-{model}.pkl')
+    # get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.FREQUENCIES}-{model}.pkl')
     # if os.path.exists(fn):
     #     print(f"model {model}: results already exist --> skipping. Found {fn}")
     #     continue
@@ -268,11 +272,8 @@ def get_meta(data_manager, dataset, paired_evaluation):
     return meta
 
 
-def get_bal_acc_values(model, options):
-    results_folder = options["results_folder"]
-    fn = os.path.join(results_folder, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv')  # get bal_acc for biological classification
-    if not os.path.isfile(fn):
-        raise ValueError(f'missing bal_acc file {fn}')
+def get_bal_acc_values(results_folder, model, options_subfolder,):
+    fn = get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv')
     bal_accs_bio = pd.read_csv(fn)
     bal_acc_values = bal_accs_bio.bal_acc.values
     mis = np.isnan(bal_acc_values)
@@ -286,7 +287,7 @@ def get_bal_acc_values(model, options):
 
 # TODO: imo this function should only be run for multiple models?
 # TODO: separate to have 2 functions: returning data and plots
-def report_optimal_k(results_folder, fig_folder, models, options):
+def report_optimal_k(results_folder, fig_folder, models, options, options_subfolder):
     print("Optimal k values")
 
     plt.figure(figsize=(5, 4))
@@ -297,9 +298,7 @@ def report_optimal_k(results_folder, fig_folder, models, options):
     max_bal_acc_values = []
     max_bal_acc_value = {}
     for m, model in enumerate(models):
-        fn = os.path.join(results_folder, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv') #get bal_acc for biological classification
-        if not os.path.isfile(fn):
-            raise ValueError(f'missing accuracy file {fn}')
+        fn = get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv')
         bal_accs_bio = pd.read_csv(fn)
         bal_acc_values = bal_accs_bio.bal_acc.values
         mis = np.isnan(bal_acc_values)
@@ -316,7 +315,7 @@ def report_optimal_k(results_folder, fig_folder, models, options):
     for m in range(len(models)):
         index = sortindex[m]
         model = models[index]
-        bal_acc_values, k_opt = get_bal_acc_values(model, options)
+        bal_acc_values, k_opt = get_bal_acc_values(results_folder, model, options_subfolder)
         index_opt = np.argmax(bal_acc_values)
         max_bal_acc = bal_acc_values[index_opt]
 
@@ -333,7 +332,7 @@ def report_optimal_k(results_folder, fig_folder, models, options):
     for m in range(len(models)):
             index = sortindex[m]
             model = models[index]
-            fn = os.path.join(results_folder, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv')  # get bal_acc for biological classification
+            fn = get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv')
             bal_accs_bio = pd.read_csv(fn)
             mis = np.isnan(bal_accs_bio.bal_acc.values)
             bal_accs_bio = bal_accs_bio[~mis]
@@ -456,23 +455,15 @@ def results_summary(meta, max_patches_per_combi, results_folder, model_k_opt, me
         return result
 
 
-def plot_all_results(models, results_folder, fig_folder, model_k_opt, median_k_opt, dataset, options):
+def plot_all_results(models, results_folder, fig_folder, model_k_opt, median_k_opt, dataset, options, options_subfolder):
     robustness_metrics, robustness_index = None, None
-    plot_per_model_results = True
-    if plot_per_model_results:
-        fig_folder_per_model = os.path.join(fig_folder, "per-model")
-        os.makedirs(fig_folder_per_model, exist_ok=True)
-        for model in models:
-            robustness_graphs.plot_results(model, results_folder, fig_folder_per_model, model_k_opt)
 
-    plot_all_model_results = True
-    if plot_all_model_results:
-        robustness_graphs.plot11_performance_robustness_tradeoff(models, options, results_folder, fig_folder, model_k_opt, median_k_opt, dataset=dataset)
+    robustness_graphs.plot11_performance_robustness_tradeoff(models, options, results_folder, fig_folder, model_k_opt, median_k_opt, dataset=dataset)
 
-        robustness_graphs.plot_4_freq_bio_vs_conf_all_models(models, results_folder, fig_folder)
-        robustness_graphs.plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder)
-        _                     , _                = robustness_graphs.plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, use_median_k_opt=True, dataset=dataset)
-        robustness_metrics, robustness_index = robustness_graphs.plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, use_median_k_opt=False, dataset=dataset) #return this as default below
+    robustness_graphs.plot_4_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, options_subfolder)
+    robustness_graphs.plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, options_subfolder)
+    _                     , _                = robustness_graphs.plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, True, dataset, options_subfolder)
+    robustness_metrics, robustness_index = robustness_graphs.plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, False, dataset, options_subfolder) #return this as default below
 
     plot_all_dataset_results = True
     if plot_all_dataset_results:
@@ -518,15 +509,11 @@ def compute(
 ):
     t_start = time.time()
 
-    # models = [model]
-    # if model != "all":
-    #     print(f"processing model {model}")
-    #     models = [model]
-
     if paired_evaluation is None:
         # default: use paired setup for TCGA, as it has many biological and confounding classes and is not balanced
         paired_evaluation = dataset == "tcga"
 
+    # Use median k value if not specified
     if k_opt_param is None:
         k_opt_param = get_median_k_opt_given_dataset(dataset)
 
@@ -549,18 +536,9 @@ def compute(
     options["DBG"] = DBG
     results_folder, fig_folder = get_folder_paths(options, dataset, model)
 
-    # if model == "all":
-    #     models = [f.split("/")[-1].replace("frequencies-same-class-", "").replace(".pkl", "") for f in
-    #               glob.glob(os.path.join(results_folder, "*.pkl"))]
-
     data_manager = FeatureDataManager(features_dir=features_dir, metadata_dir=metadata_dir)
     meta = get_meta(data_manager, dataset, options["paired_evaluation"])
     meta = reduce_dataset(meta, max_patches_per_combi=max_patches_per_combi)
-
-    # if options["paired_evaluation"]: #calculate robustness index for pairs of 2 bio classes and 2 confounding classes
-    #     robustness_metrics_dict, results = calc_rob_index_pairs(data_manager, models, dataset, meta, results_folder, fig_folder, num_workers=num_workers, k_opt_param=k_opt_param, DBG=DBG, compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, plot_graphs=plot_graphs)
-    # else: #calculate robustness index for any number of bio classes and any number of confounding classes
-    #     robustness_metrics_dict, results = calc_rob_index(data_manager, models, dataset, meta, results_folder, fig_folder, num_workers=num_workers, k_opt_param=k_opt_param, compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, DBG=DBG, plot_graphs=plot_graphs)
 
     robustness_metrics_dict, results = calc_rob_index_model(options["paired_evaluation"], data_manager, model, dataset, meta,
                                                       results_folder, fig_folder,
@@ -569,31 +547,15 @@ def compute(
                                                       compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index,
                                                       DBG=DBG, plot_graphs=plot_graphs)
 
-    # TODO: only for multiple models?
-    # if k_opt_param == -1:
-    #     # if plot_graphs:
-    #     model_k_opt, model_bal_acc_values, max_bal_acc_value = report_optimal_k(results_folder, fig_folder, models, options)
-    #     median_k_opt = get_median_k_opt_given_dataset(dataset)
-    #     # print(f"dataset {dataset} found model k_opt {model_k_opt}  median k_opt: {median_k_opt:.2f}")
-    # else: #fixed k_opt_param
-    #     print(f"using fixed k_opt_param {k_opt_param}")
-    #     model_k_opt = {model: k_opt_param} #use specified value for all plots
-    #     median_k_opt = k_opt_param
-    #     model_bal_acc_values=None
-    #
-    # # TODO: move to new entrypoint for models comparison
-    # if plot_graphs:
-    #     robustness_metrics, robustness_index = plot_all_results(models, results_folder, fig_folder, model_k_opt, median_k_opt,
-    #                                                             dataset, options)
-    #
-    #     robustness_graphs.pareto_plot(dataset, models, model_bal_acc_values, robustness_metrics, fig_folder)
-    # else:
-    #     robustness_metrics, robustness_index = None, None
-    #
     t_end_calc = time.time()
     dt = t_end_calc - t_start
     print(f"calculation time {dt:.2f} seconds = {dt/60:.2f} minutes = {dt/3600:.2f} hours")
 
+    if plot_graphs:
+        k_opt = results[model]['k_opt'] if k_opt_param == -1 else k_opt_param
+        robustness_graphs.plot_results(model, results_folder, fig_folder, k_opt)
+
+    # TODO: print a summary of the results here like the following but with less info
     # if results:
     #     result = results_summary(meta, max_patches_per_combi, results_folder, model_k_opt, median_k_opt, model_bal_acc_values, robustness_metrics, results, dt)
     #     print("final result", result)
@@ -601,14 +563,75 @@ def compute(
     return robustness_metrics_dict
 
 
+def compare(
+        model: str,
+        dataset: str,
+        features_dir: str = "data/features",
+        metadata_dir: str = "data/metadata",
+        results_dir: str = "results/robustness_index",
+        figures_subdir: str = "results/robustness_index/fig",
+        paired_evaluation: bool = None,
+        k_opt_param: int = -1,
+        max_patches_per_combi: int = -1,
+        compute_bootstrapped_robustness_index: bool = False,
+        num_workers: int = 8,
+        plot_graphs: bool = True,
+        **kwargs
+):
+    options = {
+        # "model": model,
+        "max_patches_per_combi": max_patches_per_combi,
+        "k_opt_param": k_opt_param,
+        "dataset": dataset,
+        "results_dir": results_dir,
+        "figures_subdir": figures_subdir,
+        "paired_evaluation": paired_evaluation,
+        "metadata_dir": metadata_dir
+    }
+
+    models = get_model_names(options["results_dir"])
+    results_folder, fig_folder, options_subfolder = get_generic_folder_paths(options, dataset, model)
+
+    if k_opt_param == -1:
+        # if plot_graphs:
+        model_k_opt, model_bal_acc_values, max_bal_acc_value = report_optimal_k(results_folder, fig_folder, models, options, options_subfolder)
+        median_k_opt = get_median_k_opt_given_dataset(dataset)
+        # print(f"dataset {dataset} found model k_opt {model_k_opt}  median k_opt: {median_k_opt:.2f}")
+    else: #fixed k_opt_param
+        print(f"using fixed k_opt_param {k_opt_param}")
+        model_k_opt = {model: k_opt_param} #use specified value for all plots
+        median_k_opt = k_opt_param
+        model_bal_acc_values=None
+
+    robustness_metrics, robustness_index = plot_all_results(models, results_folder, fig_folder, model_k_opt, median_k_opt,
+                                                            dataset, options, options_subfolder)
+
+    robustness_graphs.pareto_plot(dataset, models, model_bal_acc_values, robustness_metrics, fig_folder)
+
+
 def compute_all(args_dict):
-    datasets = args_dict.pop('datasets')
-    print(f"Start robustness index calculation for model '{args_dict['model']}' on datasets: {datasets}.")
+    models = args_dict.pop('model')
+    datasets = args_dict.pop('dataset')
+    for model in models:
+        print(f"Start robustness index calculation for model '{model}' on datasets: {datasets}.")
+        for dataset in datasets:
+            compute(**args_dict, dataset=dataset, model=model)
+
+
+def compare_all(args_dict):
+    datasets = args_dict.pop('dataset')
     for dataset in datasets:
-        compute(**args_dict, dataset=dataset)
+        compare(**args_dict, dataset=dataset)
 
-
-# TODO add new entrypoint for models comparison
 
 if __name__ == '__main__':
-    compute_all(vars(get_args()))
+    args_dict = vars(get_args())
+    mode = args_dict.pop('mode')
+
+    match mode:
+        case 'compute':
+            compute_all(args_dict)
+        case 'compare':
+            compare_all(args_dict)
+        case _:
+            raise ValueError(f"Unknown mode {mode}.")

@@ -9,12 +9,12 @@ from pathorob.robustness_index.robustness_index_utils import (
     aggregate_per_combi, calculate_robustness_index_at_k_opt, get_robustness_index_k_range,
     get_optimal_prediction_results_avg_all_datasets, get_optimal_prediction_results_per_dataset,
     get_robustness_results_median_k_opt_per_dataset, get_robustness_results_all_datasets,
-    get_robustness_results_per_dataset, get_model_colors, OutputFiles
+    get_robustness_results_per_dataset, get_model_colors, OutputFiles, get_file_path
 )
 
 
-def plot_results(model, results_folder, fig_folder, model_k_opt):
-    fn = os.path.join(results_folder, f'frequencies-same-class-{model}.pkl')
+def plot_results(model, results_folder, fig_folder, k_opt_bio):
+    fn = results_folder / f'{OutputFiles.FREQUENCIES}-{model}.pkl'
     if not os.path.exists(fn):
         print(f"file not found: {fn}")
         return
@@ -109,7 +109,6 @@ def plot_results(model, results_folder, fig_folder, model_k_opt):
 
     plt.plot(range(len(robustness_index_bc)), robustness_index_bc)
     plt.legend()
-    k_opt_bio = model_k_opt[model]
     index_k_opt_bio = int(k_opt_bio - 1)  # k_opt_bio is 1-based, but index is 0-based
     plt.title(f"Robustness index for {model}\n k_opt_bio={k_opt_bio} : robustness index {robustness_index_bc[index_k_opt_bio]:.2f} ")
     plt.plot(k_opt_bio, robustness_index_bc[index_k_opt_bio], 'o',color='#1f77b4')
@@ -186,7 +185,7 @@ def get_colors(min_nr_colors=19):
     ]
 
 
-def plot_4_freq_bio_vs_conf_all_models(models, results_folder, fig_folder):
+def plot_4_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, options_subfolder):
     print("plotting freq bio vs conf index for all models")
     plt.figure(figsize=(5, 4))
     mcolors = get_model_colors(models)
@@ -194,7 +193,7 @@ def plot_4_freq_bio_vs_conf_all_models(models, results_folder, fig_folder):
     stepsize = 30
     model_stats = {}
     for m, model in enumerate(models):
-        fn = os.path.join(results_folder, f'frequencies-same-class-{model}.pkl')
+        fn = get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.FREQUENCIES}-{model}.pkl')
         results = pickle.load(open(fn, 'rb'))
         stats = results['stats']
         k_range = stats['k']
@@ -254,7 +253,7 @@ def plot_4_freq_bio_vs_conf_all_models(models, results_folder, fig_folder):
     plt.close()
 
 
-def plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder):
+def plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, options_subfolder):
     print("plotting freq bio vs conf index for all models")
     plt.figure(figsize=(5, 4))
     mcolors = get_model_colors(models)
@@ -263,7 +262,7 @@ def plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder):
 
     model_stats = {}
     for m, model in enumerate(models):
-        fn = os.path.join(results_folder, f'frequencies-same-class-{model}.pkl')
+        fn = get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.FREQUENCIES}-{model}.pkl')
         results = pickle.load(open(fn, 'rb'))
         stats = results['stats']
         k_range = stats['k']
@@ -284,7 +283,7 @@ def plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder):
     #first just plot to get label in legend
     df_dict = {}
     for m, model in enumerate([models[k] for k in sorted_indices]):
-        fn = os.path.join(results_folder, f'frequencies-same-class-{model}.pkl')
+        fn = get_file_path(results_folder, model, options_subfolder,  f'{OutputFiles.FREQUENCIES}-{model}.pkl')
         results = pickle.load(open(fn, 'rb'))
         stats = results['stats']
 
@@ -305,7 +304,7 @@ def plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder):
 
     #then plot again in ascending order to ensure visibility of topmost lines
     for m, model in enumerate([models[k] for k in sorted_indices[::-1]]):
-        fn = os.path.join(results_folder, f'frequencies-same-class-{model}.pkl')
+        fn = get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.FREQUENCIES}-{model}.pkl')
         results = pickle.load(open(fn, 'rb'))
         stats = results['stats']
         k_range = stats["k"]
@@ -344,16 +343,16 @@ def plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder):
             print(f"truncated {k} to length {min_length}")
 
     df = pd.DataFrame(df_dict)
-    fn = os.path.join(results_folder, f'5-frequencies-bio-conf-classes-all-models.csv')
+    fn = os.path.join(fig_folder, f'5-frequencies-bio-conf-classes-all-models.csv')
     df.to_csv(fn, index=False)
     print(f"saved frequencies of biological and confounding classes to {fn}")
 
 
-def plot_robustness_index_values(results_folder, k_opts, rob_index_at_k_opt, models, mcolors, plot_index, add_label, plot_dot, numbers_in_labels):
+def plot_robustness_index_values(results_folder, k_opts, rob_index_at_k_opt, models, mcolors, plot_index, add_label, plot_dot, numbers_in_labels, options_subfolder):
     model_robustness_index_k_range = {}
     for m, model in enumerate([models[k] for k in plot_index]):
 
-        k_range, robustness_index, robustness_index_mean, robustness_index_std = get_robustness_index_k_range(model, results_folder)
+        k_range, robustness_index, robustness_index_mean, robustness_index_std = get_robustness_index_k_range(model, results_folder, options_subfolder)
         model_robustness_index_k_range[model] = robustness_index
         model_robustness_index_k_range[model+"-mean"] = robustness_index_mean
         model_robustness_index_k_range[model+"-std"] = robustness_index_std
@@ -409,7 +408,7 @@ def plot_robustness_with_errorbars(results_folder, models, mcolors, nr_points, f
     print("saved robustness index with error bars to", fn)
 
 
-def plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, use_median_k_opt, dataset):
+def plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, use_median_k_opt, dataset, options_subfolder):
     numbers_in_labels = True
     #plot robustness index for all modest in 1 graph
     print("plotting robustness index for all models")
@@ -417,9 +416,9 @@ def plot_6_robustness_index_all_models(models, results_folder, fig_folder, model
     mcolors = get_model_colors(models)
 
     if use_median_k_opt:
-        k_opt_used, rob_index_at_k_opt = calculate_robustness_index_at_k_opt(models, results_folder, median_k_opt)
+        k_opt_used, rob_index_at_k_opt = calculate_robustness_index_at_k_opt(models, results_folder, median_k_opt, options_subfolder)
     else:
-        k_opt_used, rob_index_at_k_opt = calculate_robustness_index_at_k_opt(models, results_folder, model_k_opt)
+        k_opt_used, rob_index_at_k_opt = calculate_robustness_index_at_k_opt(models, results_folder, model_k_opt, options_subfolder)
     rob_index_at_k_opt_array = np.array(list(rob_index_at_k_opt.values()))
     sorted_indices = np.argsort(rob_index_at_k_opt_array)
     sorted_indices = sorted_indices[::-1]
@@ -428,13 +427,13 @@ def plot_6_robustness_index_all_models(models, results_folder, fig_folder, model
     plot_index = sorted_indices
     add_label = True
     plot_dot = False
-    plot_robustness_index_values(results_folder, k_opt_used, rob_index_at_k_opt, models, mcolors, plot_index, add_label, plot_dot, numbers_in_labels)
+    plot_robustness_index_values(results_folder, k_opt_used, rob_index_at_k_opt, models, mcolors, plot_index, add_label, plot_dot, numbers_in_labels, options_subfolder)
 
     #then plot top lines last so that these are visible
     plot_index = sorted_indices[::-1]
     add_label=False
     plot_dot = True
-    robustness_metrics = plot_robustness_index_values(results_folder, k_opt_used, rob_index_at_k_opt, models, mcolors, plot_index, add_label, plot_dot, numbers_in_labels)
+    robustness_metrics = plot_robustness_index_values(results_folder, k_opt_used, rob_index_at_k_opt, models, mcolors, plot_index, add_label, plot_dot, numbers_in_labels, options_subfolder)
     nr_points = len(robustness_metrics[models[0]])
 
     plt.title(f"Robustness index\n{dataset}")

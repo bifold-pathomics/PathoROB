@@ -709,7 +709,7 @@ def plot_4d_freq_2_combinations_per_model(stats, fig_folder, dataset, model):
     plt.ylim([0,1])
     plt.legend()
     plt.title(f"Normalized frequency of same / other biological / confounding class\n{dataset} {model}")
-    fn = os.path.join(fig_folder, f'4d-freq-2-combinations-knn-{dataset}-{model}.png')
+    fn = os.path.join(fig_folder, f'4d-freq-2-combinations-knn.png')
     plt.savefig(fn, dpi=600)
     print(f"saved frequencies 2 combinations plot org to {fn}", flush=True)
     plt.close()
@@ -801,11 +801,11 @@ def aggregate_per_combi(stats, bc):
     return fraction_SS, fraction_SO, fraction_OS, fraction_OO
 
 
-def calculate_robustness_index_at_k_opt(models, results_folder, k_opt):
+def calculate_robustness_index_at_k_opt(models, results_folder, k_opt, options_subfolder):
     k_opt_bio_pred_model = {}
     rob_index_at_k_opt = {}
     for m, model in enumerate(models):
-        fn = os.path.join(results_folder, f'frequencies-same-class-{model}.pkl')
+        fn = get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.FREQUENCIES}-{model}.pkl')
         results = pickle.load(open(fn, 'rb'))
         stats = results['stats']
         k_range = np.array(stats['k'])
@@ -830,8 +830,8 @@ def calculate_robustness_index_at_k_opt(models, results_folder, k_opt):
     return k_opt_bio_pred_model, rob_index_at_k_opt
 
 
-def get_robustness_index_k_range(model, results_folder):
-    stats = get_stats(model, results_folder)
+def get_robustness_index_k_range(model, results_folder, options_subfolder):
+    stats = get_stats(model, results_folder, options_subfolder)
     return np.array(stats["k"]), stats["robustness_index"], stats["robustness_index-mean"], stats["robustness_index-std"]
 
 
@@ -1014,11 +1014,11 @@ def get_model_colors(models):
     return [[float(k) for k in plt.get_cmap("tab20")(i)] for i in range(len(models))]
 
 
-def get_stats(model, results_folder):
-    fn = os.path.join(results_folder, f'frequencies-same-class-{model}.pkl')
-    if not os.path.exists(fn):
-        print(f"file not found: {fn}")
-        return None, None, None
+def get_stats(model, results_folder, options_subfolder):
+    fn = get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.FREQUENCIES}-{model}.pkl')
+    # if not os.path.exists(fn):
+    #     print(f"file not found: {fn}")
+    #     return None, None, None
     results = pickle.load(open(fn, 'rb'))
     stats = results['stats']
     return stats
@@ -1074,3 +1074,48 @@ def get_folder_paths(options, dataset, model):
     fig_folder.mkdir(parents=True, exist_ok=True)
 
     return results_folder, fig_folder
+
+
+def get_generic_folder_paths(options, dataset, model):
+    results_folder = Path(options["results_dir"])
+    fig_subfolder = Path(options["figures_subdir"])
+    max_patches_per_combi = options["max_patches_per_combi"]
+    k_opt_param = options["k_opt_param"]
+
+    args_subfolder = f"{max_patches_per_combi}_{k_opt_param}"
+
+    fig_folder = results_folder / fig_subfolder
+    # results_folder = results_folder  / dataset / args_subfolder
+    options_subfolder = Path(dataset) / args_subfolder
+
+    print(f"using results_folder: {results_folder}, fig_folder: {fig_folder}")
+
+    options["results_folder"] = results_folder
+    options["fig_folder"] = fig_folder
+
+    results_folder.mkdir(parents=True, exist_ok=True)
+    fig_folder.mkdir(parents=True, exist_ok=True)
+
+    return results_folder, fig_folder, options_subfolder
+
+
+def get_model_names(base_folder: str):
+    base_folder = Path(base_folder)
+    model_folders = [item.stem for item in base_folder.iterdir() if item.is_dir() and item.name != "fig"]
+    return model_folders
+
+
+def get_file_path(results_path, model, options_subfolder, output_file):
+    file_path = results_path / model / options_subfolder / output_file
+    if not file_path.exists():
+        raise ValueError(f'missing file {file_path}')
+    return file_path
+
+
+def read_file(results_path, model, options_subfolder, output_file):
+    file_path = results_path / model / options_subfolder / output_file
+    if not file_path.exists():
+        raise ValueError(f'missing file {file_path}')
+    return pd.read_csv(file_path)
+
+
