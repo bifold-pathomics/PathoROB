@@ -519,28 +519,21 @@ def compute(
 def compare(
         model: str,
         dataset: str,
-        features_dir: str = "data/features",
-        metadata_dir: str = "data/metadata",
         results_dir: str = "results/robustness_index",
         figures_subdir: str = "results/robustness_index/fig",
-        paired_evaluation: bool = None,
         k_opt_param: int = -1,
         max_patches_per_combi: int = -1,
         **kwargs
 ):
     options = {
-        # "model": model,
         "max_patches_per_combi": max_patches_per_combi,
         "k_opt_param": k_opt_param,
-        "dataset": dataset,
         "results_dir": results_dir,
         "figures_subdir": figures_subdir,
-        "paired_evaluation": paired_evaluation,
-        "metadata_dir": metadata_dir
     }
 
-    models = get_model_names(options["results_dir"])
-    results_folder, fig_folder, options_subfolder = get_generic_folder_paths(options, dataset, model)
+    models = get_model_names(results_dir)
+    results_folder, fig_folder, options_subfolder = get_generic_folder_paths(options, dataset)
 
     if k_opt_param == -1:
         model_k_opt, model_bal_acc_values, max_bal_acc_value = report_optimal_k(results_folder, fig_folder, models, options, options_subfolder)

@@ -1076,7 +1076,7 @@ def get_folder_paths(options, dataset, model):
     return results_folder, fig_folder
 
 
-def get_generic_folder_paths(options, dataset, model):
+def get_generic_folder_paths(options, dataset):
     results_folder = Path(options["results_dir"])
     fig_subfolder = Path(options["figures_subdir"])
     max_patches_per_combi = options["max_patches_per_combi"]

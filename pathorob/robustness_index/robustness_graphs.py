@@ -443,12 +443,13 @@ def plot_6_robustness_index_all_models(models, results_folder, fig_folder, model
     plt.tight_layout()
     k_str = "median-k_opt" if use_median_k_opt else "model-k_opt"
     if len(models) > 1:
-        plt.savefig(os.path.join(fig_folder,f'6-robustness-index-all-models-no-legend-{k_str}.png'), dpi=600)
-        plt.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
-        plt.gcf().set_size_inches(12, 6)
-        plt.tight_layout()
-        fn = os.path.join(fig_folder,f'6-robustness-index-all-models-{k_str}.png')
+        fn = fig_folder / f'6-robustness-index-all-models-no-legend-{k_str}.png'
         plt.savefig(fn, dpi=600)
+        # plt.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
+        # plt.gcf().set_size_inches(12, 6)
+        # plt.tight_layout()
+        # fn = os.path.join(fig_folder,f'6-robustness-index-all-models-{k_str}.png')
+        # plt.savefig(fn, dpi=600)
         print(f"saved robustness index to {fn}")
 
         plot_robustness_with_errorbars(results_folder, models, mcolors, nr_points, fig_folder, use_median_k_opt, sorted_indices, dataset)
@@ -467,11 +468,12 @@ def plot_6_robustness_index_all_models(models, results_folder, fig_folder, model
         df.to_csv(fn, index=False)
         print(f"saved robustness index all models to {fn}")
     else:
-        plt.savefig(os.path.join(fig_folder,f'6-robustness-index-{models[0]}-no-legend-{k_str}.png'), dpi=600)
-        plt.gcf().set_size_inches(12, 6)
-        plt.tight_layout()
-        fn = os.path.join(fig_folder,f'6-robustness-index-{models[0]}-{k_str}.png')
+        fn = fig_folder / f'6-robustness-index-{models[0]}-no-legend-{k_str}.png'
         plt.savefig(fn, dpi=600)
+        # plt.gcf().set_size_inches(12, 6)
+        # plt.tight_layout()
+        # fn = os.path.join(fig_folder,f'6-robustness-index-{models[0]}-{k_str}.png')
+        # plt.savefig(fn, dpi=600)
         print(f"saved robustness index single model to {fn}")
 
 
