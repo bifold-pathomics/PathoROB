@@ -38,8 +38,8 @@ def get_args():
     #required parameters
     parser.add_argument('--model', type=str, help='Model name')
     parser.add_argument(
-        "--datasets", type=str, nargs="+", default=AVAILABLE_DATASETS,
-        help=f"PathoROB datasets on which the robustess index is computed. Available datasets: {AVAILABLE_DATASETS}."
+        "--dataset", type=str, nargs="+", default=AVAILABLE_DATASETS,
+        help=f"PathoROB datasets on which the robustness index is computed. Available datasets: {AVAILABLE_DATASETS}."
     )
     #optional parameters
     parser.add_argument('--features_dir', type=str, default="data/features", help='Folder for embeddings. The features should be stored in this folder: [features_dir]/[model]/[dataset].')
@@ -47,7 +47,9 @@ def get_args():
     parser.add_argument('--results_dir', type=str, default="results/robustness_index", help='Root folder for results.')
     parser.add_argument('--figures_subdir', type=str, default="fig", help='Root folder for figures.')
     parser.add_argument('--paired_evaluation', type=str2bool, default=None, help='Whether to use paired evaluation. Per default (None), this is True for tcga and False for the other datasets.')
-    parser.add_argument('--k_opt_param', type=int, default=-1, help='Currently, k_opt_param should be set to the default value of -1, which ensures results are produced for all values of k. For future use, this parameter can be set to a specific k value to only report the robustness index for the specified value of k. '                                                                    'Fixed k_opt parameter; if -1, the optimal k value will be optimized based on biological class prediction.')
+    parser.add_argument('--k_opt_param', type=int, default=None, help='This parameter can be set to a specific k value to report the robustness index for the specified value of k. '
+                                                                      'By default, None is used, which means the default values per dataset are used. '
+                                                                      'If -1, results are produced for all values of k, the optimal k value will be optimized based on biological class prediction.')
     parser.add_argument('--max_patches_per_combi', type=int, default=-1, help='Maximum patches per combination. -1 for no limit, or a specific number to limit the dataset size.')
     parser.add_argument('--compute_bootstrapped_robustness_index', action='store_true', help='Compute bootstrapped robustness index.')
     parser.add_argument('--num_workers', type=int, default=8, help='Number of workers for parallel processing.')
@@ -158,9 +160,10 @@ def select_optimal_k_value(dataset, model, patch_names, embeddings, meta, result
             print(f"select_optimal_k_value k {k} dt {dt:.2f}", flush=True)
         accuracies_k_bio = accuracies_k_bio[::-1]  # reverse back again to match the regular k_values_sel order
 
-    # TODO: error here when using fixed k
-    index_max_bal_acc = np.argmax(accuracies_k_bio)
-    opt_k = k_values_sel[index_max_bal_acc]
+        # TODO: error here when using fixed k
+        index_max_bal_acc = np.argmax(accuracies_k_bio)
+        opt_k = k_values_sel[index_max_bal_acc]
+
     print(f"opt-k {opt_k} max balanced accuracy {np.max(accuracies_k_bio):.4f} accuracies_k_bio {[f'{float(f):.3f}' for f in accuracies_k_bio]}", flush=True)
     accuracies_bio.append(accuracies_k_bio)
     aucs_per_class_list.append(aucs_per_class)
@@ -515,7 +518,7 @@ def compute(
 ):
     t_start = time.time()
 
-    models = [model]
+    # models = [model]
     # if model != "all":
     #     print(f"processing model {model}")
     #     models = [model]
@@ -523,6 +526,9 @@ def compute(
     if paired_evaluation is None:
         # default: use paired setup for TCGA, as it has many biological and confounding classes and is not balanced
         paired_evaluation = dataset == "tcga"
+
+    if k_opt_param is None:
+        k_opt_param = get_median_k_opt_given_dataset(dataset)
 
     options = {
         "model": model,
@@ -556,7 +562,7 @@ def compute(
     # else: #calculate robustness index for any number of bio classes and any number of confounding classes
     #     robustness_metrics_dict, results = calc_rob_index(data_manager, models, dataset, meta, results_folder, fig_folder, num_workers=num_workers, k_opt_param=k_opt_param, compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, DBG=DBG, plot_graphs=plot_graphs)
 
-    robustness_metrics_dict, results = calc_rob_index_model(options["paired_evaluation"], data_manager, models[0], dataset, meta,
+    robustness_metrics_dict, results = calc_rob_index_model(options["paired_evaluation"], data_manager, model, dataset, meta,
                                                       results_folder, fig_folder,
                                                       num_workers=num_workers,
                                                       k_opt_param=k_opt_param,
