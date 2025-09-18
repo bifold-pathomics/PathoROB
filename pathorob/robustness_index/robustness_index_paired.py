@@ -114,16 +114,3 @@ def evaluate_model_pairs(dataset, data_manager, model, meta, results_folder, fig
 
     return bio_class_prediction_results, robustness_metrics
 
-
-def calc_rob_index_pairs(data_manager, models, dataset, meta, results_folder, fig_folder, num_workers=8, k_opt_param=-1, DBG=False, compute_bootstrapped_robustness_index=False, plot_graphs=True, options_subfolder=None):
-    results = {}
-    robustness_metrics_dict = {}
-    for m,model in enumerate(models):
-        get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.FREQUENCIES}-{model}.pkl')
-        if os.path.exists(fn):
-            print(f"model {model}: results already exist --> skipping. Found {fn}")
-            continue
-        bio_class_prediction_results, robustness_metrics = evaluate_model_pairs(dataset, data_manager, model, meta, results_folder, fig_folder, num_workers=num_workers, k_opt_param=k_opt_param, DBG=DBG, compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, plot_graphs=plot_graphs)
-        results[model] = bio_class_prediction_results
-        robustness_metrics_dict[model] = robustness_metrics
-    return results, robustness_metrics_dict

@@ -10,8 +10,7 @@ from sklearn.preprocessing import LabelEncoder, Normalizer
 from pathorob.features.data_manager import FeatureDataManager
 from pathorob.features.constants import AVAILABLE_DATASETS
 import pathorob.robustness_index.robustness_graphs as robustness_graphs
-from pathorob.robustness_index.robustness_index_paired import calc_rob_index_pairs, \
-    evaluate_model_pairs
+from pathorob.robustness_index.robustness_index_paired import evaluate_model_pairs
 from pathorob.robustness_index.robustness_index_utils import (
     aggregate_stats, save_total_stats, get_field_names_given_dataset, evaluate_knn_accuracy,
     get_k_values,
@@ -216,24 +215,11 @@ def evaluate_model(
     return bio_class_prediction_results, robustness_metrics_dict
 
 
-def calc_rob_index(data_manager, models, dataset, meta, results_folder, fig_folder, num_workers=8, k_opt_param=-1, compute_bootstrapped_robustness_index=False, DBG=False, plot_graphs=True, options_subfolder=None):
-    results = {}
-    robustness_metrics_dict = {}
-    for m,model in enumerate(models):
-        print(f"processing model {m+1}/{len(models)}: {model}")
-        get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.FREQUENCIES}-{model}.pkl')
-        if os.path.exists(fn):
-            print(f"model {model}: results already exist --> skipping. Found {fn}")
-            continue
-        bio_class_prediction_results, robustness_metrics = evaluate_model(dataset, data_manager, model, meta, results_folder, fig_folder, num_workers=num_workers, k_opt_param=k_opt_param,  compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, DBG=DBG, plot_graphs=plot_graphs)
-        results[model] = bio_class_prediction_results
-        robustness_metrics_dict[model] = robustness_metrics
-    return results, robustness_metrics_dict
-
 def calc_rob_index_model(paired_eval, data_manager, model, dataset, meta, results_folder, fig_folder, num_workers=8, k_opt_param=-1, compute_bootstrapped_robustness_index=False, DBG=False, plot_graphs=True):
     results = {}
     robustness_metrics_dict = {}
 
+    #TODO: add an option to cache the files optional??
     # get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.FREQUENCIES}-{model}.pkl')
     # if os.path.exists(fn):
     #     print(f"model {model}: results already exist --> skipping. Found {fn}")
@@ -540,9 +526,6 @@ def compare(
         paired_evaluation: bool = None,
         k_opt_param: int = -1,
         max_patches_per_combi: int = -1,
-        compute_bootstrapped_robustness_index: bool = False,
-        num_workers: int = 8,
-        plot_graphs: bool = True,
         **kwargs
 ):
     options = {
@@ -560,7 +543,6 @@ def compare(
     results_folder, fig_folder, options_subfolder = get_generic_folder_paths(options, dataset, model)
 
     if k_opt_param == -1:
-        # if plot_graphs:
         model_k_opt, model_bal_acc_values, max_bal_acc_value = report_optimal_k(results_folder, fig_folder, models, options, options_subfolder)
         median_k_opt = get_median_k_opt_given_dataset(dataset)
         # print(f"dataset {dataset} found model k_opt {model_k_opt}  median k_opt: {median_k_opt:.2f}")
