@@ -376,11 +376,11 @@ def plot_robustness_index_values(results_folder, k_opts, rob_index_at_k_opt, mod
 
 
 def plot_robustness_with_errorbars(results_folder, models, mcolors, nr_points, fig_folder,
-                               use_median_k_opt, sorted_indices, dataset):
+                               use_median_k_opt, sorted_indices, dataset, options_subfolder):
     # now add error bars to this existing plot using std dev
     plt.figure(figsize=(5, 4))
     for m, model in enumerate([models[k] for k in sorted_indices]):
-        k_range, robustness_index, _, robustness_index_std = get_robustness_index_k_range(model, results_folder)
+        k_range, robustness_index, _, robustness_index_std = get_robustness_index_k_range(model, results_folder, options_subfolder)
         if robustness_index is None:
             continue
         if len(robustness_index_std) == len(robustness_index):
@@ -452,7 +452,7 @@ def plot_6_robustness_index_all_models(models, results_folder, fig_folder, model
         # plt.savefig(fn, dpi=600)
         print(f"saved robustness index to {fn}")
 
-        plot_robustness_with_errorbars(results_folder, models, mcolors, nr_points, fig_folder, use_median_k_opt, sorted_indices, dataset)
+        plot_robustness_with_errorbars(results_folder, models, mcolors, nr_points, fig_folder, use_median_k_opt, sorted_indices, dataset, options_subfolder)
         min_length = np.min([len(robustness_metrics[model]) for model in models])
         remove = []
         for k in robustness_metrics.keys():
@@ -464,7 +464,7 @@ def plot_6_robustness_index_all_models(models, results_folder, fig_folder, model
         robustness_metrics = {k: robustness_metrics[k] for k in robustness_metrics.keys() if k not in remove}
 
         df = pd.DataFrame(robustness_metrics)
-        fn = os.path.join(results_folder, f'6-robustness-index-all-models-{k_str}.csv')
+        fn = os.path.join(fig_folder, f'6-robustness-index-all-models-{k_str}.csv')
         df.to_csv(fn, index=False)
         print(f"saved robustness index all models to {fn}")
     else:

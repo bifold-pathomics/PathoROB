@@ -517,7 +517,6 @@ def compute(
 
 
 def compare(
-        model: str,
         dataset: str,
         results_dir: str = "results/robustness_index",
         figures_subdir: str = "results/robustness_index/fig",
@@ -541,7 +540,7 @@ def compare(
         # print(f"dataset {dataset} found model k_opt {model_k_opt}  median k_opt: {median_k_opt:.2f}")
     else: #fixed k_opt_param
         print(f"using fixed k_opt_param {k_opt_param}")
-        model_k_opt = {model: k_opt_param} #use specified value for all plots
+        model_k_opt = {model: k_opt_param for model in models}
         median_k_opt = k_opt_param
         model_bal_acc_values=None
 
