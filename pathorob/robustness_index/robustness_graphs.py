@@ -691,19 +691,14 @@ def plot_8_robustness_index_all_datasets(datasets, models, options):
         print(f"saved robustness index all models dots to {fn}")
 
 
-def plot11_performance_robustness_tradeoff(models, options, results_folder, fig_folder, model_k_opt, median_k_opt, dataset):
-    mcolors = get_model_colors(models)
-
+def plot11_performance_robustness_tradeoff(models, options, results_folder, fig_folder, model_k_opt, median_k_opt, dataset, options_subfolder):
     for index, model in enumerate(models):
         plt.figure(figsize=(5, 3))
         # Create a second y-axis that shares the same x-axis
         fig, ax1 = plt.subplots(figsize=(10, 6))
         ax2 = ax1.twinx()
 
-        fn = os.path.join(results_folder, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv')  # get bal_acc for biological classification
-        if not os.path.exists(fn):
-            print(f"File {fn} does not exist, skipping model {model}")
-            continue
+        fn = get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv')
         bal_accs_bio = pd.read_csv(fn)
         mis = np.isnan(bal_accs_bio.bal_acc.values)
         bal_accs_bio = bal_accs_bio[~mis]
@@ -722,7 +717,7 @@ def plot11_performance_robustness_tradeoff(models, options, results_folder, fig_
         ax1.tick_params(axis='y', labelcolor='b')
 
         #k_range: consecutive
-        k_range, robustness_index, robustness_index_mean, robustness_index_std = get_robustness_index_k_range(model, results_folder)
+        k_range, robustness_index, robustness_index_mean, robustness_index_std = get_robustness_index_k_range(model, results_folder, options_subfolder)
         index_opt_k_rob = np.argmax(robustness_index)
 
         ax2.plot(k_range, robustness_index, 'g-', label=f"Robustness index")
@@ -740,9 +735,7 @@ def plot11_performance_robustness_tradeoff(models, options, results_folder, fig_
 
         plt.gcf().set_size_inches(12, 6)
         plt.tight_layout()
-        folder=os.path.join(fig_folder, "11-tradeoff")
-        os.makedirs(folder, exist_ok=True)
-        fn=os.path.join(folder, f"11a-performance-robustness-tradeoff-{dataset}-{model}.png")
+        fn = fig_folder /f"11a-performance-robustness-tradeoff-{dataset}-{model}.png"
         plt.savefig(fn, dpi = 600)
         print(f"saved robustness index to {fn}")
         plt.close()
@@ -779,10 +772,8 @@ def plot11_performance_robustness_tradeoff(models, options, results_folder, fig_
 
         plt.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
 
-
         plt.xlabel('Robustness index')
         plt.ylabel('Balanced accuracy')
-
         plt.title(f"Robustness index and Balanced Accuracy\n{dataset}  {model}")
         plt.xlabel("k")
         plt.ylabel("Prediction accuracy")  # the cumsum() above aggregates over neighbors 1-k
@@ -792,7 +783,7 @@ def plot11_performance_robustness_tradeoff(models, options, results_folder, fig_
         plt.tight_layout()
         folder=os.path.join(fig_folder, "11-tradeoff")
         os.makedirs(folder, exist_ok=True)
-        fn=os.path.join(folder, f"11b-performance-robustness-tradeoff-{dataset}-{model}.png")
+        fn = fig_folder / f"11b-performance-robustness-tradeoff-{dataset}-{model}.png"
         plt.savefig(fn, dpi = 600)
         print(f"saved robustness index to {fn}")
         plt.close()
