@@ -408,12 +408,14 @@ def results_summary(model, meta, max_patches_per_combi, results_folder, model_k_
 
 
 def plot_all_results(models, results_folder, fig_folder, model_k_opt, median_k_opt, dataset, options, options_subfolder):
+    boostrapped_robustness_index = options.get("compute_bootstrapped_robustness_index", False)
+
     robustness_graphs.plot11_performance_robustness_tradeoff(models, options, results_folder, fig_folder, model_k_opt, median_k_opt, dataset, options_subfolder)
 
     robustness_graphs.plot_4_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, options_subfolder)
     robustness_graphs.plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, options_subfolder)
-    _                     , _                = robustness_graphs.plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, True, dataset, options_subfolder)
-    robustness_metrics, robustness_index = robustness_graphs.plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, False, dataset, options_subfolder) #return this as default below
+    _                     , _                = robustness_graphs.plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, True, dataset, boostrapped_robustness_index, options_subfolder)
+    robustness_metrics, robustness_index = robustness_graphs.plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, False, dataset,  boostrapped_robustness_index, options_subfolder) #return this as default below
 
     plot_all_dataset_results = True
     if plot_all_dataset_results:
@@ -518,6 +520,7 @@ def compare(
         figures_subdir: str = "results/robustness_index/fig",
         k_opt_param: int = -1,
         max_patches_per_combi: int = -1,
+        compute_bootstrapped_robustness_index: bool = False,
         **kwargs
 ):
     options = {

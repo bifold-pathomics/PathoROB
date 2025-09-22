@@ -408,7 +408,7 @@ def plot_robustness_with_errorbars(results_folder, models, mcolors, nr_points, f
     print("saved robustness index with error bars to", fn)
 
 
-def plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, use_median_k_opt, dataset, options_subfolder):
+def plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, use_median_k_opt, dataset, boostrapped_robustness_index, options_subfolder):
     numbers_in_labels = True
     #plot robustness index for all modest in 1 graph
     print("plotting robustness index for all models")
@@ -452,7 +452,8 @@ def plot_6_robustness_index_all_models(models, results_folder, fig_folder, model
         # plt.savefig(fn, dpi=600)
         print(f"saved robustness index to {fn}")
 
-        plot_robustness_with_errorbars(results_folder, models, mcolors, nr_points, fig_folder, use_median_k_opt, sorted_indices, dataset, options_subfolder)
+        if boostrapped_robustness_index:
+            plot_robustness_with_errorbars(results_folder, models, mcolors, nr_points, fig_folder, use_median_k_opt, sorted_indices, dataset, options_subfolder)
         min_length = np.min([len(robustness_metrics[model]) for model in models])
         remove = []
         for k in robustness_metrics.keys():
