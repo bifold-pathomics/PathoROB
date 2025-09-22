@@ -1082,7 +1082,7 @@ def get_generic_folder_paths(options, dataset):
 
     args_subfolder = f"{max_patches_per_combi}_{k_opt_param}"
 
-    fig_folder = results_folder / fig_subfolder
+    fig_folder = results_folder / fig_subfolder / dataset / args_subfolder
     options_subfolder = Path(dataset) / args_subfolder
 
     print(f"using results_folder: {results_folder}, fig_folder: {fig_folder}")
