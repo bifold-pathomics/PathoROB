@@ -14,7 +14,7 @@ from pathorob.robustness_index.robustness_index_utils import (
 
 
 def plot_results(model, results_folder, fig_folder, k_opt_bio):
-    fn = results_folder / f'{OutputFiles.FREQUENCIES}-{model}.pkl'
+    fn = results_folder / OutputFiles.FREQUENCIES
     if not os.path.exists(fn):
         print(f"file not found: {fn}")
         return
@@ -193,7 +193,7 @@ def plot_4_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, optio
     stepsize = 30
     model_stats = {}
     for m, model in enumerate(models):
-        fn = get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.FREQUENCIES}-{model}.pkl')
+        fn = get_file_path(results_folder, model, options_subfolder, OutputFiles.FREQUENCIES)
         results = pickle.load(open(fn, 'rb'))
         stats = results['stats']
         k_range = stats['k']
@@ -262,7 +262,7 @@ def plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, optio
 
     model_stats = {}
     for m, model in enumerate(models):
-        fn = get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.FREQUENCIES}-{model}.pkl')
+        fn = get_file_path(results_folder, model, options_subfolder, OutputFiles.FREQUENCIES)
         results = pickle.load(open(fn, 'rb'))
         stats = results['stats']
         k_range = stats['k']
@@ -283,7 +283,7 @@ def plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, optio
     #first just plot to get label in legend
     df_dict = {}
     for m, model in enumerate([models[k] for k in sorted_indices]):
-        fn = get_file_path(results_folder, model, options_subfolder,  f'{OutputFiles.FREQUENCIES}-{model}.pkl')
+        fn = get_file_path(results_folder, model, options_subfolder, OutputFiles.FREQUENCIES)
         results = pickle.load(open(fn, 'rb'))
         stats = results['stats']
 
@@ -304,7 +304,7 @@ def plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, optio
 
     #then plot again in ascending order to ensure visibility of topmost lines
     for m, model in enumerate([models[k] for k in sorted_indices[::-1]]):
-        fn = get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.FREQUENCIES}-{model}.pkl')
+        fn = get_file_path(results_folder, model, options_subfolder, OutputFiles.FREQUENCIES)
         results = pickle.load(open(fn, 'rb'))
         stats = results['stats']
         k_range = stats["k"]
@@ -698,7 +698,7 @@ def plot11_performance_robustness_tradeoff(models, options, results_folder, fig_
         fig, ax1 = plt.subplots(figsize=(10, 6))
         ax2 = ax1.twinx()
 
-        fn = get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv')
+        fn = get_file_path(results_folder, model, options_subfolder, OutputFiles.BALANCED_ACCURACIES)
         bal_accs_bio = pd.read_csv(fn)
         mis = np.isnan(bal_accs_bio.bal_acc.values)
         bal_accs_bio = bal_accs_bio[~mis]
@@ -781,8 +781,6 @@ def plot11_performance_robustness_tradeoff(models, options, results_folder, fig_
 
         plt.gcf().set_size_inches(12, 6)
         plt.tight_layout()
-        folder=os.path.join(fig_folder, "11-tradeoff")
-        os.makedirs(folder, exist_ok=True)
         fn = fig_folder / f"11b-performance-robustness-tradeoff-{dataset}-{model}.png"
         plt.savefig(fn, dpi = 600)
         print(f"saved robustness index to {fn}")

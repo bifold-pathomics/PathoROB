@@ -12,10 +12,11 @@ from sklearn.metrics import roc_auc_score, balanced_accuracy_score
 from sklearn.neighbors import KNeighborsClassifier
 from scipy.stats import mode
 
+
 class OutputFiles(StrEnum):
-    SUMMARY_FILE = "results_summary.json"
-    BALANCED_ACCURACY = "bal-acc-bio"
-    FREQUENCIES = "frequencies-same-class"
+    SUMMARY = "results_summary.json"
+    BALANCED_ACCURACIES = "balanced-accuracies-bio.csv"
+    FREQUENCIES = "frequencies-same-class.pkl"
 
 
 def bootstrapped_robustness_index(SO_cum, OS_cum, n_bootstrap = 1000):
@@ -611,13 +612,13 @@ def save_total_stats(stats, meta, dataset, model, results_folder, k_opt, bal_acc
     all_bio_classes = np.unique(meta[biological_class_field].values)
     all_conf_classes = np.unique(meta[confounding_class_field].values)
 
-    fn = os.path.join(results_folder, f'{OutputFiles.FREQUENCIES}-{model}.pkl')
+    fn = results_folder / OutputFiles.FREQUENCIES
     with open(fn, 'wb') as f:
         pickle.dump({'stats': stats, 'all_bio_classes': all_bio_classes, 'all_conf_classes': all_conf_classes}, f)
     print(f'saved results to {fn}')
 
     # Store summary file
-    output_file = os.path.join(results_folder, OutputFiles.SUMMARY_FILE)
+    output_file = os.path.join(results_folder, OutputFiles.SUMMARY)
     df_dict = convert_types_in_stats(df_dict)
     with open(output_file, 'w') as f:
         json.dump(df_dict, f, indent=4)
@@ -779,7 +780,7 @@ def save_balanced_accuracies(model, accuracies_bio, k_values, results_folder):
     bal_accs = np.mean(accuracies_bio, axis=0)
     stds = np.std(accuracies_bio, axis=0)
     bio_class_prediction_result = pd.DataFrame({"k": k_values, "bal_acc": bal_accs, "std": stds})
-    fn = os.path.join(results_folder, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv')
+    fn = results_folder / OutputFiles.BALANCED_ACCURACIES
     bio_class_prediction_result.to_csv(fn, index=False)
     print(f'saved bal_accs to {fn}', flush=True)
 
@@ -805,7 +806,7 @@ def calculate_robustness_index_at_k_opt(models, results_folder, k_opt, options_s
     k_opt_bio_pred_model = {}
     rob_index_at_k_opt = {}
     for m, model in enumerate(models):
-        fn = get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.FREQUENCIES}-{model}.pkl')
+        fn = get_file_path(results_folder, model, options_subfolder, OutputFiles.FREQUENCIES)
         results = pickle.load(open(fn, 'rb'))
         stats = results['stats']
         k_range = np.array(stats['k'])
@@ -845,7 +846,7 @@ def get_optimal_prediction_results_avg_all_datasets(datasets, models, options):
         for dataset in datasets:
             options_ds = get_default_dataset_options(dataset, options)
             results_folder_ds = options_ds["results_folder"]
-            fn = os.path.join(results_folder_ds, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv') #get bal_acc for biological classification
+            fn = results_folder_ds / OutputFiles.BALANCED_ACCURACIES
             if not os.path.isfile(fn):
                 raise ValueError(f'missing bal_acc file {fn}')
             bal_accs_bio = pd.read_csv(fn)
@@ -883,7 +884,7 @@ def get_optimal_prediction_results_per_dataset(datasets, models, options):
         for dataset in datasets:
             options_ds = get_default_dataset_options(dataset, options)
             results_folder_ds = options_ds["results_folder"]
-            fn = os.path.join(results_folder_ds, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv') #get bal_acc for biological classification
+            fn = results_folder_ds / OutputFiles.BALANCED_ACCURACIES
             if not os.path.isfile(fn):
                 raise ValueError(f'missing bal_acc file {fn}')
             bal_accs_bio = pd.read_csv(fn)
@@ -1015,10 +1016,7 @@ def get_model_colors(models):
 
 
 def get_stats(model, results_folder, options_subfolder):
-    fn = get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.FREQUENCIES}-{model}.pkl')
-    # if not os.path.exists(fn):
-    #     print(f"file not found: {fn}")
-    #     return None, None, None
+    fn = get_file_path(results_folder, model, options_subfolder, OutputFiles.FREQUENCIES)
     results = pickle.load(open(fn, 'rb'))
     stats = results['stats']
     return stats

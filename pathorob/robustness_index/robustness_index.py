@@ -259,7 +259,7 @@ def get_meta(data_manager, dataset, paired_evaluation):
 
 
 def get_bal_acc_values(results_folder, model, options_subfolder,):
-    fn = get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv')
+    fn = get_file_path(results_folder, model, options_subfolder, OutputFiles.BALANCED_ACCURACIES)
     bal_accs_bio = pd.read_csv(fn)
     bal_acc_values = bal_accs_bio.bal_acc.values
     mis = np.isnan(bal_acc_values)
@@ -284,7 +284,7 @@ def report_optimal_k(results_folder, fig_folder, models, options, options_subfol
     max_bal_acc_values = []
     max_bal_acc_value = {}
     for m, model in enumerate(models):
-        fn = get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv')
+        fn = get_file_path(results_folder, model, options_subfolder, OutputFiles.BALANCED_ACCURACIES)
         bal_accs_bio = pd.read_csv(fn)
         bal_acc_values = bal_accs_bio.bal_acc.values
         mis = np.isnan(bal_acc_values)
@@ -318,7 +318,7 @@ def report_optimal_k(results_folder, fig_folder, models, options, options_subfol
     for m in range(len(models)):
             index = sortindex[m]
             model = models[index]
-            fn = get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.BALANCED_ACCURACY}-{model}.csv')
+            fn = get_file_path(results_folder, model, options_subfolder, OutputFiles.BALANCED_ACCURACIES)
             bal_accs_bio = pd.read_csv(fn)
             mis = np.isnan(bal_accs_bio.bal_acc.values)
             bal_accs_bio = bal_accs_bio[~mis]
