@@ -39,7 +39,7 @@ def get_args():
                              '"compare" to compare multiple models, requires robustness index computed for all models.')
 
     #required parameters
-    parser.add_argument('--model', type=str, nargs="+", help='Model name.')
+    parser.add_argument('--model', type=str, help='Model name.')
     parser.add_argument(
         "--dataset", type=str, nargs="+", default=AVAILABLE_DATASETS,
         help=f"PathoROB datasets on which the robustness index is computed. Available datasets: {AVAILABLE_DATASETS}."
@@ -50,8 +50,8 @@ def get_args():
     parser.add_argument('--results_dir', type=str, default="results/robustness_index", help='Root folder for results.')
     parser.add_argument('--figures_subdir', type=str, default="fig", help='Root folder for figures.')
     parser.add_argument('--paired_evaluation', type=str2bool, default=None, help='Whether to use paired evaluation. Per default (None), this is True for tcga and False for the other datasets.')
-    parser.add_argument('--k_opt_param', type=int, default=None, help='This parameter can be set to a specific k value to report the robustness index for the specified value of k. '
-                                                                      'By default, None is used, which means the default values per dataset are used. '
+    parser.add_argument('--k_opt_param', type=int, default=0, help='This parameter can be set to a specific k value to report the robustness index for the specified value of k. '
+                                                                      'By default, 0 is used, which means the default values per dataset are used. '
                                                                       'If -1, results are produced for all values of k, the optimal k value will be optimized based on biological class prediction.')
     parser.add_argument('--max_patches_per_combi', type=int, default=-1, help='Maximum patches per combination. -1 for no limit, or a specific number to limit the dataset size.')
     parser.add_argument('--compute_bootstrapped_robustness_index', action='store_true', help='Compute bootstrapped robustness index.')
@@ -441,7 +441,6 @@ def get_median_k_opt_given_dataset(dataset):
     return int(median_k_opt)
 
 
-# TODO: remove defaults
 def compute(
         model: str,
         dataset: str,
@@ -450,11 +449,11 @@ def compute(
         results_dir: str = "results/robustness_index",
         figures_subdir: str = "results/robustness_index/fig",
         paired_evaluation: bool = None,
-        k_opt_param: int = -1,
+        k_opt_param: int = 0,
         max_patches_per_combi: int = -1,
         compute_bootstrapped_robustness_index: bool = False,
         num_workers: int = 8,
-        plot_graphs: bool = True,
+        plot_graphs: bool = False,
         debug_mode: bool = False,
 ):
     t_start = time.time()
@@ -464,7 +463,7 @@ def compute(
         paired_evaluation = dataset == "tcga"
 
     # Use median k value if not specified
-    if k_opt_param is None:
+    if k_opt_param == 0:
         k_opt_param = get_median_k_opt_given_dataset(dataset)
 
     options = {
@@ -501,10 +500,9 @@ def compute(
     dt = t_end_calc - t_start
     print(f"calculation time {dt:.2f} seconds = {dt/60:.2f} minutes = {dt/3600:.2f} hours")
 
+    k_opt = results[model]['k_opt'] if k_opt_param == -1 else k_opt_param
     if plot_graphs:
-        k_opt = results[model]['k_opt'] if k_opt_param == -1 else k_opt_param
         robustness_graphs.plot_results(model, results_folder, fig_folder, k_opt)
-
 
     if results:
         median_k_opt = get_median_k_opt_given_dataset(dataset)
@@ -549,12 +547,10 @@ def compare(
 
 
 def compute_all(args_dict):
-    models = args_dict.pop('model')
     datasets = args_dict.pop('dataset')
-    for model in models:
-        print(f"Start robustness index calculation for model '{model}' on datasets: {datasets}.")
-        for dataset in datasets:
-            compute(**args_dict, dataset=dataset, model=model)
+    print(f"Start robustness index calculation for model '{args_dict["model"]}' on datasets: {datasets}.")
+    for dataset in datasets:
+        compute(**args_dict, dataset=dataset)
 
 
 def compare_all(args_dict):

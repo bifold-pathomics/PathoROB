@@ -1085,7 +1085,6 @@ def get_generic_folder_paths(options, dataset):
     args_subfolder = f"{max_patches_per_combi}_{k_opt_param}"
 
     fig_folder = results_folder / fig_subfolder
-    # results_folder = results_folder  / dataset / args_subfolder
     options_subfolder = Path(dataset) / args_subfolder
 
     print(f"using results_folder: {results_folder}, fig_folder: {fig_folder}")
@@ -1110,12 +1109,4 @@ def get_file_path(results_path, model, options_subfolder, output_file):
     if not file_path.exists():
         raise ValueError(f'missing file {file_path}')
     return file_path
-
-
-def read_file(results_path, model, options_subfolder, output_file):
-    file_path = results_path / model / options_subfolder / output_file
-    if not file_path.exists():
-        raise ValueError(f'missing file {file_path}')
-    return pd.read_csv(file_path)
-
 
