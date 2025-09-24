@@ -185,7 +185,7 @@ def get_colors(min_nr_colors=19):
     ]
 
 
-def plot_4_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, options_subfolder):
+def plot_4_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, plots_wo_legend, options_subfolder):
     print("plotting freq bio vs conf index for all models")
     plt.figure(figsize=(5, 4))
     mcolors = get_model_colors(models)
@@ -241,19 +241,17 @@ def plot_4_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, optio
     plt.xlim([0, len(model_stats[models[0]]["fso"])])
     plt.tight_layout()
     if len(models) > 1:
-        fn = os.path.join(fig_folder,f'4-freq-bio-conf-knn-all-models-neighbor-k-no-legend.png')
-        plt.savefig(fn, dpi=600)
-        print(f"saved freq bio conf index to {fn}")
-        plt.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
-        plt.gcf().set_size_inches(12, 6)
-        plt.tight_layout()
-        fn = os.path.join(fig_folder,f'4-freq-bio-conf-knn-all-models-neighbor-k.png')
+        if not plots_wo_legend:
+            plt.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
+            plt.gcf().set_size_inches(12, 6)
+            plt.tight_layout()
+        fn = fig_folder / f'4-freq-bio-conf-knn-all-models-neighbor-k.png'
         plt.savefig(fn, dpi=600)
         print(f"saved freq bio conf index to {fn}")
     plt.close()
 
 
-def plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, options_subfolder):
+def plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, plots_wo_legend, options_subfolder):
     print("plotting freq bio vs conf index for all models")
     plt.figure(figsize=(5, 4))
     mcolors = get_model_colors(models)
@@ -324,14 +322,11 @@ def plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, optio
     plt.xlim([0,len(freq_same_bio_class)])
     plt.tight_layout()
     if len(models) > 1:
-        fn = os.path.join(fig_folder,f'5-freq-bio-conf-knn-all-models-knn-no-legend.png')
-        plt.savefig(fn, dpi=600)
-        print(f"saved freq bio conf index to {fn}")
-    plt.gcf().set_size_inches(12, 6)
-    plt.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
-    plt.tight_layout()
-    if len(models) > 1:
-        fn = os.path.join(fig_folder,f'5-freq-bio-conf-knn-all-models-knn.png')
+        if not plots_wo_legend:
+            plt.gcf().set_size_inches(12, 6)
+            plt.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
+            plt.tight_layout()
+        fn = fig_folder / f'5-freq-bio-conf-knn-all-models-knn.png'
         plt.savefig(fn, dpi=600)
         print(f"saved freq bio conf index to {fn}")
     plt.close()
@@ -376,7 +371,7 @@ def plot_robustness_index_values(results_folder, k_opts, rob_index_at_k_opt, mod
 
 
 def plot_robustness_with_errorbars(results_folder, models, mcolors, nr_points, fig_folder,
-                               use_median_k_opt, sorted_indices, dataset, options_subfolder):
+                               use_median_k_opt, sorted_indices, dataset, plots_wo_legend, options_subfolder):
     # now add error bars to this existing plot using std dev
     plt.figure(figsize=(5, 4))
     for m, model in enumerate([models[k] for k in sorted_indices]):
@@ -391,24 +386,21 @@ def plot_robustness_with_errorbars(results_folder, models, mcolors, nr_points, f
     plt.ylabel("Robustness index")
     plt.xlim([0, nr_points])
     plt.tight_layout()
-    if use_median_k_opt:
-        fn = os.path.join(fig_folder, f'6-robustness-index-all-models-error-bars-median-k_opt-no-legend.png')
-    else:
-        fn = os.path.join(fig_folder, f'6-robustness-index-all-models-error-bars-model-k_opt-no-legend.png')
-    plt.savefig(fn, dpi=600)
-    plt.legend()
-    plt.gcf().set_size_inches(12, 6)
-    plt.tight_layout()
+
+    if not plots_wo_legend:
+        plt.legend()
+        plt.gcf().set_size_inches(12, 6)
+        plt.tight_layout()
 
     if use_median_k_opt:
-        fn = os.path.join(fig_folder, f'6-robustness-index-all-models-error-bars-median-k_opt.png')
+        fn = fig_folder / f'6-robustness-index-all-models-error-bars-median-k_opt.png'
     else:
-        fn = os.path.join(fig_folder, f'6-robustness-index-all-models-error-bars-model-k_opt.png')
+        fn = fig_folder / f'6-robustness-index-all-models-error-bars-model-k_opt.png'
     plt.savefig(fn, dpi=600)
     print("saved robustness index with error bars to", fn)
 
 
-def plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, use_median_k_opt, dataset, boostrapped_robustness_index, options_subfolder):
+def plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, use_median_k_opt, dataset, boostrapped_robustness_index, plots_wo_legend, options_subfolder):
     numbers_in_labels = True
     #plot robustness index for all modest in 1 graph
     print("plotting robustness index for all models")
@@ -443,17 +435,16 @@ def plot_6_robustness_index_all_models(models, results_folder, fig_folder, model
     plt.tight_layout()
     k_str = "median-k_opt" if use_median_k_opt else "model-k_opt"
     if len(models) > 1:
-        fn = fig_folder / f'6-robustness-index-all-models-no-legend-{k_str}.png'
+        if not plots_wo_legend:
+            plt.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
+            plt.gcf().set_size_inches(12, 6)
+            plt.tight_layout()
+        fn = fig_folder / f'6-robustness-index-all-models-{k_str}.png'
         plt.savefig(fn, dpi=600)
-        # plt.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
-        # plt.gcf().set_size_inches(12, 6)
-        # plt.tight_layout()
-        # fn = os.path.join(fig_folder,f'6-robustness-index-all-models-{k_str}.png')
-        # plt.savefig(fn, dpi=600)
         print(f"saved robustness index to {fn}")
 
         if boostrapped_robustness_index:
-            plot_robustness_with_errorbars(results_folder, models, mcolors, nr_points, fig_folder, use_median_k_opt, sorted_indices, dataset, options_subfolder)
+            plot_robustness_with_errorbars(results_folder, models, mcolors, nr_points, fig_folder, use_median_k_opt, sorted_indices, dataset, plots_wo_legend, options_subfolder)
         min_length = np.min([len(robustness_metrics[model]) for model in models])
         remove = []
         for k in robustness_metrics.keys():
@@ -469,12 +460,11 @@ def plot_6_robustness_index_all_models(models, results_folder, fig_folder, model
         df.to_csv(fn, index=False)
         print(f"saved robustness index all models to {fn}")
     else:
-        fn = fig_folder / f'6-robustness-index-{models[0]}-no-legend-{k_str}.png'
+        if not plots_wo_legend:
+            plt.gcf().set_size_inches(12, 6)
+            plt.tight_layout()
+        fn = os.path.join(fig_folder,f'6-robustness-index-{models[0]}-{k_str}.png')
         plt.savefig(fn, dpi=600)
-        # plt.gcf().set_size_inches(12, 6)
-        # plt.tight_layout()
-        # fn = os.path.join(fig_folder,f'6-robustness-index-{models[0]}-{k_str}.png')
-        # plt.savefig(fn, dpi=600)
         print(f"saved robustness index single model to {fn}")
 
 

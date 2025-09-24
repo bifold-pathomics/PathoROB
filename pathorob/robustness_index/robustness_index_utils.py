@@ -1061,7 +1061,7 @@ def get_folder_paths(options, dataset, model):
         results_folder = results_folder / "debug"
 
     results_folder = results_folder / model / dataset / args_subfolder
-    fig_folder = results_folder / fig_subfolder    # TODO: are they by model or generic?
+    fig_folder = results_folder / fig_subfolder
 
     print(f"using results_folder: {results_folder}, fig_folder: {fig_folder}")
 

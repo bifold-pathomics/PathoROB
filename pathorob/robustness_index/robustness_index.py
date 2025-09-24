@@ -57,6 +57,7 @@ def get_args():
     parser.add_argument('--compute_bootstrapped_robustness_index', action='store_true', help='Compute bootstrapped robustness index.')
     parser.add_argument('--num_workers', type=int, default=8, help='Number of workers for parallel processing.')
     parser.add_argument('--plot_graphs', action='store_true', help='Plot graphs when flag is provided.')
+    parser.add_argument('--plots_wo_legend', action='store_true', help='Plot graphs without legend when flag is provided. Only some plots accept this option')
     parser.add_argument('--debug_mode', action='store_true', help='Run in debug mode with limited data for faster testing.')
 
     return parser.parse_args()
@@ -219,11 +220,6 @@ def calc_rob_index_model(paired_eval, data_manager, model, dataset, meta, result
     results = {}
     robustness_metrics_dict = {}
 
-    #TODO: add an option to cache the files optional??
-    # get_file_path(results_folder, model, options_subfolder, f'{OutputFiles.FREQUENCIES}-{model}.pkl')
-    # if os.path.exists(fn):
-    #     print(f"model {model}: results already exist --> skipping. Found {fn}")
-    #     continue
     if paired_eval:
         bio_class_prediction_results, robustness_metrics = evaluate_model_pairs(dataset, data_manager, model, meta, results_folder, fig_folder, num_workers=num_workers, k_opt_param=k_opt_param, DBG=DBG, compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, plot_graphs=plot_graphs)
     else:
@@ -271,9 +267,7 @@ def get_bal_acc_values(results_folder, model, options_subfolder,):
     return bal_acc_values, k_opt
 
 
-# TODO: imo this function should only be run for multiple models?
-# TODO: separate to have 2 functions: returning data and plots
-def report_optimal_k(results_folder, fig_folder, models, options, options_subfolder):
+def report_optimal_k(results_folder, fig_folder, models, plots_wo_legend, options_subfolder):
     print("Optimal k values")
 
     plt.figure(figsize=(5, 4))
@@ -344,18 +338,13 @@ def report_optimal_k(results_folder, fig_folder, models, options, options_subfol
     plt.xlabel("k")
     plt.ylabel("Balanced accuracy")
     plt.title(f"Optimal k values")
+    if not plots_wo_legend:
+        plt.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
+        plt.gcf().set_size_inches(12, 6)
     plt.tight_layout()
-    plt.savefig(os.path.join(fig_folder, f'optimal-k-values-{model_str}-no-legend.png'), dpi=600)
-    plt.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
-    plt.gcf().set_size_inches(12, 6)
-    plt.tight_layout()
-    fn = os.path.join(fig_folder, f'optimal-k-values-{model_str}.png')
+    fn = fig_folder / f'optimal-k-values-{model_str}.png'
     plt.savefig(fn, dpi=600)
     print(f"saved optimal k values to {fn}")
-    # df_optimal_k = pd.DataFrame({'model': models, 'k_opt': opt_k_values, 'max_bal_acc': max_bal_acc_values})
-    # fn = os.path.join(results_folder, f'optimal-k-values-{model_str}.csv')
-    # df_optimal_k.to_csv(fn, index=False)
-    # print(f"saved optimal k values to {fn}")
     return model_k_opt, model_bal_acc_values, max_bal_acc_value
 
 
@@ -407,15 +396,15 @@ def results_summary(model, meta, max_patches_per_combi, results_folder, model_k_
     return result
 
 
-def plot_all_results(models, results_folder, fig_folder, model_k_opt, median_k_opt, dataset, options, options_subfolder):
+def plot_all_results(models, results_folder, fig_folder, model_k_opt, median_k_opt, dataset, options, plots_wo_legend, options_subfolder):
     boostrapped_robustness_index = options.get("compute_bootstrapped_robustness_index", False)
 
     robustness_graphs.plot11_performance_robustness_tradeoff(models, options, results_folder, fig_folder, model_k_opt, median_k_opt, dataset, options_subfolder)
 
-    robustness_graphs.plot_4_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, options_subfolder)
-    robustness_graphs.plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, options_subfolder)
-    _                     , _                = robustness_graphs.plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, True, dataset, boostrapped_robustness_index, options_subfolder)
-    robustness_metrics, robustness_index = robustness_graphs.plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, False, dataset,  boostrapped_robustness_index, options_subfolder) #return this as default below
+    robustness_graphs.plot_4_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, plots_wo_legend, options_subfolder)
+    robustness_graphs.plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, plots_wo_legend, options_subfolder)
+    _                     , _                = robustness_graphs.plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, True, dataset, boostrapped_robustness_index, plots_wo_legend, options_subfolder)
+    robustness_metrics, robustness_index = robustness_graphs.plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, False, dataset,  boostrapped_robustness_index, plots_wo_legend,  options_subfolder) #return this as default below
 
     plot_all_dataset_results = True
     if plot_all_dataset_results:
@@ -456,6 +445,7 @@ def compute(
         compute_bootstrapped_robustness_index: bool = False,
         num_workers: int = 8,
         plot_graphs: bool = False,
+        plots_wo_legend: bool = False,
         debug_mode: bool = False,
 ):
     t_start = time.time()
@@ -520,6 +510,7 @@ def compare(
         figures_subdir: str = "results/robustness_index/fig",
         k_opt_param: int = -1,
         max_patches_per_combi: int = -1,
+        plots_wo_legend: bool = False,
         compute_bootstrapped_robustness_index: bool = False,
         **kwargs
 ):
@@ -534,7 +525,7 @@ def compare(
     results_folder, fig_folder, options_subfolder = get_generic_folder_paths(options, dataset)
 
     if k_opt_param == -1:
-        model_k_opt, model_bal_acc_values, max_bal_acc_value = report_optimal_k(results_folder, fig_folder, models, options, options_subfolder)
+        model_k_opt, model_bal_acc_values, max_bal_acc_value = report_optimal_k(results_folder, fig_folder, models, plots_wo_legend, options_subfolder)
         median_k_opt = get_median_k_opt_given_dataset(dataset)
         # print(f"dataset {dataset} found model k_opt {model_k_opt}  median k_opt: {median_k_opt:.2f}")
     else: #fixed k_opt_param
@@ -544,7 +535,7 @@ def compare(
         model_bal_acc_values=None
 
     robustness_metrics, robustness_index = plot_all_results(models, results_folder, fig_folder, model_k_opt, median_k_opt,
-                                                            dataset, options, options_subfolder)
+                                                            dataset, options, plots_wo_legend, options_subfolder)
 
     robustness_graphs.pareto_plot(dataset, models, model_bal_acc_values, robustness_metrics, fig_folder)
 
