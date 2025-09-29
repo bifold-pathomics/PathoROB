@@ -256,9 +256,7 @@ def plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, plots
     plt.figure(figsize=(5, 4))
     mcolors = get_model_colors(models)
     first_bio_value = []
-    robustness_index = {}
 
-    model_stats = {}
     for m, model in enumerate(models):
         fn = get_file_path(results_folder, model, options_subfolder, OutputFiles.FREQUENCIES)
         results = pickle.load(open(fn, 'rb'))
@@ -305,7 +303,6 @@ def plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, plots
         fn = get_file_path(results_folder, model, options_subfolder, OutputFiles.FREQUENCIES)
         results = pickle.load(open(fn, 'rb'))
         stats = results['stats']
-        k_range = stats["k"]
 
         freq_same_bio_class = stats['fraction_SO-cum-norm']
         freq_same_conf_class = stats['fraction_OS-cum-norm']

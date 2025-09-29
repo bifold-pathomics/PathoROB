@@ -1,4 +1,3 @@
-import os
 import time
 import argparse
 
@@ -15,7 +14,7 @@ from pathorob.robustness_index.robustness_index_utils import (
     aggregate_stats, save_total_stats, get_field_names_given_dataset, evaluate_knn_accuracy,
     get_k_values,
     save_balanced_accuracies, evaluate_embeddings, calculate_per_class_prediction_stats,
-    calculate_robustness_index_at_k_opt, get_model_colors, get_folder_paths, plot_results_per_model,
+    get_model_colors, get_folder_paths, plot_results_per_model,
     OutputFiles, get_model_names, get_generic_folder_paths, get_file_path
 )
 
@@ -41,7 +40,7 @@ def get_args():
     #required parameters
     parser.add_argument('--model', type=str, help='Model name.')
     parser.add_argument(
-        "--dataset", type=str, nargs="+", default=AVAILABLE_DATASETS,
+        "--datasets", type=str, nargs="+", default=AVAILABLE_DATASETS,
         help=f"PathoROB datasets on which the robustness index is computed. Available datasets: {AVAILABLE_DATASETS}."
     )
     #optional parameters
@@ -63,7 +62,7 @@ def get_args():
     return parser.parse_args()
 
 
-def check_sufficient_unique_values(X_train, X_test, y_train, y_test, model, results_folder):
+def check_sufficient_unique_values(X_train, X_test, y_train, y_test):
     nr_unique_values = len(np.unique(X_train.flatten()))
     nr_zero_embeddings = np.sum(X_train.sum(axis=1) == 0)
     if nr_zero_embeddings > 0:
@@ -84,7 +83,7 @@ def check_sufficient_unique_values(X_train, X_test, y_train, y_test, model, resu
         raise ValueError("y_test only has 1 value")
 
 
-def select_optimal_k_value(dataset, model, patch_names, embeddings, meta, results_folder, fig_folder,
+def select_optimal_k_value(dataset, model, embeddings, meta, results_folder, fig_folder,
                            num_workers = 8, compute_bootstrapped_robustness_index=False, do_checks=False, opt_k=None, plot_graphs=True):
     #perform train/val split at the confounding-class level (medical center level) to prevent biases and measure OOD performance
     biological_class_field, confounding_class_field = get_field_names_given_dataset(dataset)
@@ -131,7 +130,7 @@ def select_optimal_k_value(dataset, model, patch_names, embeddings, meta, result
         raise ValueError(f"train and test bio_classes do not match: {nr_train_bio_classes} {nr_test_bio_classes}")
 
     if do_checks:
-        check_sufficient_unique_values(X_train, X_test, y_train, y_test, model, results_folder)
+        check_sufficient_unique_values(X_train, X_test, y_train, y_test)
         if np.any(np.linalg.norm(X_train, axis=1) == 0) or np.any(np.linalg.norm(X_test, axis=1) == 0):
             raise ValueError(
                 "X_train or X_test contains zero vectors, which can cause division by zero in distance calculation.")
@@ -208,7 +207,7 @@ def evaluate_model(
     print("len index before ",len(meta.index),"unique",len(np.unique(meta.index)))
 
     k_opt, bio_class_prediction_results, robustness_metrics_dict = select_optimal_k_value(
-        dataset, model, patch_names, embeddings, meta, results_folder, fig_folder,
+        dataset, model, embeddings, meta, results_folder, fig_folder,
         num_workers=num_workers, compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index,
         opt_k=k_opt_param, plot_graphs=plot_graphs
     )
@@ -359,7 +358,7 @@ def reduce_dataset(meta, max_patches_per_combi):
     return meta
 
 
-def results_summary(model, meta, max_patches_per_combi, results_folder, model_k_opt, median_k_opt, results, dt):
+def results_summary(model, meta, max_patches_per_combi, median_k_opt, results, dt):
     nr_patches = len(meta)
     result = {}
 
@@ -378,10 +377,8 @@ def results_summary(model, meta, max_patches_per_combi, results_folder, model_k_
 
     if bootstrapping_avail:
         mean_std_str = f"robustness_index mean {model_rob_index_mean[index_k_opt_full]:.3f}  std {model_rob_index_std[index_k_opt_full]:.3f}"
-        mean_std_str_median = f"robustness_index mean {model_rob_index_mean[index_median_k_opt]:.3f} std {model_rob_index_std[index_median_k_opt]:.3f}"
     else:
         mean_std_str = f"robustness_index mean -1 std -1"
-        mean_std_str_median = "robustness_index mean -1 std -1"
 
     result_string = (f"final result max-patches-per-combi {max_patches_per_combi} "
                      f"model {model} nr-patches {nr_patches} "
@@ -498,7 +495,7 @@ def compute(
 
     if results:
         median_k_opt = get_median_k_opt_given_dataset(dataset)
-        result = results_summary(model, meta, max_patches_per_combi, results_folder, k_opt, median_k_opt, results, dt)
+        result = results_summary(model, meta, max_patches_per_combi, median_k_opt, results, dt)
         print("final result", result)
 
     return robustness_metrics_dict
@@ -519,6 +516,7 @@ def compare(
         "k_opt_param": k_opt_param,
         "results_dir": results_dir,
         "figures_subdir": figures_subdir,
+        "compute_bootstrapped_robustness_index": compute_bootstrapped_robustness_index
     }
 
     models = get_model_names(results_dir)
@@ -541,14 +539,14 @@ def compare(
 
 
 def compute_all(args_dict):
-    datasets = args_dict.pop('dataset')
+    datasets = args_dict.pop('datasets')
     print(f"Start robustness index calculation for model '{args_dict["model"]}' on datasets: {datasets}.")
     for dataset in datasets:
         compute(**args_dict, dataset=dataset)
 
 
 def compare_all(args_dict):
-    datasets = args_dict.pop('dataset')
+    datasets = args_dict.pop('datasets')
     for dataset in datasets:
         compare(**args_dict, dataset=dataset)
 
