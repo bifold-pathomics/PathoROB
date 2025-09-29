@@ -540,7 +540,7 @@ def compare(
 
 def compute_all(args_dict):
     datasets = args_dict.pop('datasets')
-    print(f"Start robustness index calculation for model '{args_dict["model"]}' on datasets: {datasets}.")
+    print(f"Start robustness index calculation for model {args_dict['model']} on datasets: {datasets}.")
     for dataset in datasets:
         compute(**args_dict, dataset=dataset)
 
