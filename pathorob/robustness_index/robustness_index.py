@@ -84,13 +84,11 @@ def check_sufficient_unique_values(X_train, X_test, y_train, y_test):
 
 
 def select_optimal_k_value(dataset, model, embeddings, meta, results_folder, fig_folder,
-                           num_workers = 8, compute_bootstrapped_robustness_index=False, do_checks=False, opt_k=None, plot_graphs=True):
+                           num_workers = 8, compute_bootstrapped_robustness_index=False, do_checks=False, opt_k=0, plot_graphs=True):
     #perform train/val split at the confounding-class level (medical center level) to prevent biases and measure OOD performance
     biological_class_field, confounding_class_field = get_field_names_given_dataset(dataset)
 
-    max_samples_per_group = int(np.max(meta["slide_id"].value_counts().values))
-
-    k_values = get_k_values(dataset, False, opt_k, max_samples_per_group)
+    k_values = get_k_values(dataset, False, opt_k)
 
     bio_values = meta[biological_class_field].values
     bio_classes = np.unique(bio_values)
@@ -114,7 +112,6 @@ def select_optimal_k_value(dataset, model, embeddings, meta, results_folder, fig
     nr_samples = min(nr_samples_train, nr_samples_test)
     print(f"knn dataset size X_train {X_train.shape} X_test {X_test.shape}", flush=True)
 
-    print("dbg encode labels", flush=True)
     y_train = bio_values
     y_test = bio_values
 

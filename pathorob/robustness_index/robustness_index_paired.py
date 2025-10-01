@@ -8,7 +8,7 @@ from pathorob.robustness_index.robustness_index_utils import (
 )
 
 
-def select_optimal_k_value_pairs(dataset, model, patch_names, embeddings, meta, results_folder, fig_folder, num_workers=8, DBG=False, compute_bootstrapped_robustness_index=False, opt_k=-1, plot_graphs=True):
+def select_optimal_k_value_pairs(dataset, model, patch_names, embeddings, meta, results_folder, fig_folder, num_workers=8, DBG=False, compute_bootstrapped_robustness_index=False, opt_k=0, plot_graphs=True):
     project_combis = np.unique(meta.subset.values)
     print(f"nr project_combis {len(project_combis)}")
     biological_class_field, confounding_class_field = get_field_names_given_dataset(dataset)
@@ -30,9 +30,7 @@ def select_optimal_k_value_pairs(dataset, model, patch_names, embeddings, meta, 
             print(f'no patches found for project_combi {project_combi}; continuing')
             continue
 
-        max_samples_per_group = int(np.max(meta_combi["slide_id"].value_counts().values))
-
-        k_values = get_k_values(dataset, True, opt_k, max_samples_per_group)
+        k_values = get_k_values(dataset, True, opt_k)
         if DBG and len(k_values) > 1:
             k_values = [k for k in k_values if k <= 51]  # limit k values for debugging
 

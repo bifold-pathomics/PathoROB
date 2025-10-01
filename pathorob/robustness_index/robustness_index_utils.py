@@ -454,8 +454,10 @@ def filter_out_query_case_from_neighbors(meta, dataset, knn_indices, X_train, X_
     return knn_indices
 
 def evaluate_knn_accuracy(meta, dataset, X_train, X_test, y_train, y_test, n_neighbors, num_workers, knn_distances=None, knn_indices=None, do_checks=False):
+    max_samples_per_group = int(np.max(meta["slide_id"].value_counts().values))
+    n_neighbors_with_margin = n_neighbors + max_samples_per_group #ensure sufficient neighbors will be left after removing neighbors from query case below
     knn_model = KNeighborsClassifier(
-        n_neighbors=n_neighbors, n_jobs=num_workers
+        n_neighbors=n_neighbors_with_margin, n_jobs=num_workers
     )
 
     if do_checks:
@@ -486,10 +488,9 @@ def evaluate_knn_accuracy(meta, dataset, X_train, X_test, y_train, y_test, n_nei
     return balanced_accuracy, auc_per_class, knn_distances, knn_indices, effective_n_neighbors
 
 
-def get_k_values(dataset, paired_evaluation, opt_k=None, max_samples_per_group=0):
+def get_k_values(dataset, paired_evaluation, opt_k=0):
     if opt_k and opt_k > 0:
-        margin = max_samples_per_group
-        k_values = np.array([opt_k + margin])
+        k_values = np.array([opt_k])
         return k_values
     else:
         max_k = get_max_k(dataset, paired_evaluation)
