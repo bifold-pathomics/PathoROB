@@ -160,7 +160,6 @@ def select_optimal_k_value(dataset, model, embeddings, meta, results_folder, fig
             print(f"select_optimal_k_value k {k} dt {dt:.2f}", flush=True)
         accuracies_k_bio = accuracies_k_bio[::-1]  # reverse back again to match the regular k_values_sel order
 
-        # TODO: error here when using fixed k
         index_max_bal_acc = np.argmax(accuracies_k_bio)
         opt_k = k_values_sel[index_max_bal_acc]
 
