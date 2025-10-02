@@ -77,14 +77,30 @@ For feature extraction, ~100K images (~2GB) will be downloaded from [Hugging Fac
 
 #### (1) Robustness Index
 
-```
-python3 -m pathorob.robustness_index.robustness_index \
---model uni2h_clsmean \
---dataset { camelyon OR tcga OR tolkach_esca }
+```shell
+python3 -m pathorob.robustness_index.robustness_index --model uni2h_clsmean
 ```
 
-- Results: `results/robustness_index`
+- Results: `results/robustness_index` (see example results here)
+  - `{model}/{dataset}/{max_patches_per_combi}_{k_opt_param}/results_summary.json`:
+    - Summary of the results including the final robustness index and the k parameter used.
+  - `{model}/{dataset}/{max_patches_per_combi}_{k_opt_param}/fig`:
+    - Folder with additional visualizations if the `--plot_graphs` flag is set. 
+  - `{model}/{dataset}/{max_patches_per_combi}_{k_opt_param}/balanced-accuracies-bio.json`:
+    - Balanced accuracy of the kNN classifier for selecting the k value if required.
+  - `{model}/{dataset}/{max_patches_per_combi}_{k_opt_param}/frequency-same-class.pkl`:
+    - Raw results for computing the robustness index.
 - Further arguments: `pathorob/robustness_index/robustness_index.py`
+  - Notice: per default, we use the `k` values per dataset as determined in our [preprint](https://arxiv.org/abs/2507.17845).
+
+After computing the robustness index for multiple models, you can create further visualizations to compare them:
+
+```shell
+python3 -m pathorob.robustness_index.robustness_index --mode compare
+```
+
+- Results: `results/robustness_index/fig`
+  - TODO
 
 #### (2) Average Performance Drop (APD)
 
@@ -93,13 +109,13 @@ python3 -m pathorob.apd.apd --model uni2h_clsmean
 ```
 
 - Results: `results/apd` (see example results here)
-   - `{model}/{dataset}_raw.json` per {dataset}:
-      - In-/out-of-domain accuracies per split and trail.
-   - `{model}/{dataset}_summary.json` per {dataset}:
-      - In-/out-of-domain APDs for the specific dataset.
-      - In-/out-of-domain accuracy means per split averaged over trails.
-   - `{model}/aggregated_summary.json`:
-      - In-/out-of-domain APDs with 95% confidence intervals over all specified datasets.
+  - `{model}/{dataset}_summary.json`:
+    - In-/out-of-domain APDs for the specific dataset.
+    - In-/out-of-domain accuracy means per split averaged over trails.
+  - `{model}/aggregated_summary.json`:
+    - In-/out-of-domain APDs with 95% confidence intervals over all specified datasets.
+  - `{model}/{dataset}_raw.json`:
+    - In-/out-of-domain accuracies per split and trail.
 - Further arguments: `pathorob/apd/apd.py`
 
 #### (3) Clustering Score

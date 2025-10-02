@@ -1,0 +1,9 @@
+{
+    "k_opt": 46,
+    "bal_acc_at_k_opt": 0.9587777777777778,
+    "robustness_index-k_opt": 0.7681137397547795,
+    "ID_performance-k_opt": 0.9256346607781923,
+    "OOD_performance-k_opt": 0.9439976655967318,
+    "generalization_index-k_opt": 1.0198382856613228,
+    "SO_SS_ratio-k_opt": 0.26612242480479353
+}

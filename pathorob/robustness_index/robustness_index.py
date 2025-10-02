@@ -40,7 +40,7 @@ def get_args():
     #required parameters
     parser.add_argument('--model', type=str, help='Model name.')
     parser.add_argument(
-        "--datasets", type=str, nargs="+", default=AVAILABLE_DATASETS,
+        "--datasets", type=str, nargs="+", default=None,
         help=f"PathoROB datasets on which the robustness index is computed. Available datasets: {AVAILABLE_DATASETS}."
     )
     #optional parameters
@@ -447,10 +447,6 @@ def compute(
         # default: use paired setup for TCGA, as it has many biological and confounding classes and is not balanced
         paired_evaluation = dataset == "tcga"
 
-    # Use median k value if not specified
-    if k_opt_param == 0:
-        k_opt_param = get_median_k_opt_given_dataset(dataset)
-
     options = {
         "model": model,
         "max_patches_per_combi": max_patches_per_combi,
@@ -469,6 +465,10 @@ def compute(
     DBG=debug_mode
     options["DBG"] = DBG
     results_folder, fig_folder = get_folder_paths(options, dataset, model)
+
+    # Use median k value if not specified
+    if k_opt_param == 0:
+        k_opt_param = get_median_k_opt_given_dataset(dataset)
 
     data_manager = FeatureDataManager(features_dir=features_dir, metadata_dir=metadata_dir)
     meta = get_meta(data_manager, dataset, options["paired_evaluation"])
@@ -501,7 +501,7 @@ def compare(
         dataset: str,
         results_dir: str = "results/robustness_index",
         figures_subdir: str = "results/robustness_index/fig",
-        k_opt_param: int = -1,
+        k_opt_param: int = 0,
         max_patches_per_combi: int = -1,
         plots_wo_legend: bool = False,
         compute_bootstrapped_robustness_index: bool = False,
@@ -536,6 +536,8 @@ def compare(
 
 def compute_all(args_dict):
     datasets = args_dict.pop('datasets')
+    if datasets is None:
+        datasets = FeatureDataManager(features_dir=args_dict["features_dir"]).get_available_datasets(args_dict["model"])
     print(f"Start robustness index calculation for model {args_dict['model']} on datasets: {datasets}.")
     for dataset in datasets:
         compute(**args_dict, dataset=dataset)
@@ -543,6 +545,8 @@ def compute_all(args_dict):
 
 def compare_all(args_dict):
     datasets = args_dict.pop('datasets')
+    if datasets is None:
+        datasets = AVAILABLE_DATASETS
     for dataset in datasets:
         compare(**args_dict, dataset=dataset)
 

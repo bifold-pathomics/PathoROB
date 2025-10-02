@@ -2,7 +2,7 @@ import copy
 import json
 import os
 import pickle
-from enum import StrEnum
+from enum import Enum
 from pathlib import Path
 
 import numpy as np
@@ -13,10 +13,13 @@ from sklearn.neighbors import KNeighborsClassifier
 from scipy.stats import mode
 
 
-class OutputFiles(StrEnum):
+class OutputFiles(str, Enum):
     SUMMARY = "results_summary.json"
     BALANCED_ACCURACIES = "balanced-accuracies-bio.csv"
     FREQUENCIES = "frequencies-same-class.pkl"
+
+    def __str__(self) -> str:
+        return str(self.value)
 
 
 def bootstrapped_robustness_index(SO_cum, OS_cum, n_bootstrap = 1000):

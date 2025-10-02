@@ -4,7 +4,6 @@ import importlib.resources as pkg_resources
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 
 from pathorob import resources
 from pathorob.features.data_manager import FeatureDataManager
