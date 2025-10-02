@@ -24,8 +24,9 @@ def get_args():
         help="Name of foundation model (name of folder in feature_dir that holds the features of the model)."
     )
     parser.add_argument(
-        "--datasets", type=str, nargs="+", default=AVAILABLE_DATASETS,
-        help=f"PathoROB datasets on which the clustering score is computed. Available datasets: {AVAILABLE_DATASETS}."
+        "--datasets", type=str, nargs="+", default=None,
+        help=f"PathoROB datasets on which the clustering score is computed. If not specified, all datasets with "
+             f"extracted features from the given model will considered. Available datasets: {AVAILABLE_DATASETS}."
     )
     # optional
     parser.add_argument(
@@ -60,6 +61,10 @@ def get_args():
         "--num_trials", type=int, default=50,
         help="Optional. Number of repetitions to run the clustering (for calculating the average clustering score). Default: 50."
     )
+    parser.add_argument(
+        "--overwrite_results", action='store_true',
+        help="Recompute clustering results even if they already exist."
+    )
     return parser.parse_args()
 
 
@@ -74,6 +79,7 @@ def compute(
         maxK: int = 30,
         metric: str = "cosine",
         num_trials: int = 50,
+        overwrite_results: bool = False,
 ):
     ### CHECK ARGUMENTS FROM COMMAND LINE #########################################
     if (K is not None) and K<2:
@@ -88,6 +94,19 @@ def compute(
         raise ValueError(f"{num_trials} : Number of trials, num_trials, must be at least 1.")
     results_dir = Path(results_dir) / model / dataset
     Path(results_dir).mkdir(parents=True, exist_ok=True)
+    ###############################################################################
+
+    ### Check if results already exist ############################################
+    if (results_dir / "results_summary.json").exists() and not overwrite_results:
+        with open(results_dir / "results_summary.json", 'r') as f:
+            res_agg = json.load(f)
+        print(
+            f"Clustering score for model '{model}' on dataset '{dataset}' already computed: "
+            f"{np.round(res_agg['clustering_score_mean'], 5)} +- {np.round(res_agg['clustering_score_mean_std'], 5)} "
+            f"(mean +- std.)"
+        )
+        print("To recompute, set '--overwrite_results'.")
+        return res_agg
     ###############################################################################
 
     ### PREPARE DATA LOADER #######################################################
@@ -131,6 +150,7 @@ def compute(
     # which then forms the data for one individual experiment
     all_combinations = list(product(combinations(bio_options, r=2), combinations(mc_options, r=2)))
     all_silhouette_scores, all_aris = pd.DataFrame(), pd.DataFrame()
+    sel_K = []
     print(f"Clustering score evaluation for model '{model}' on dataset '{dataset}' "
           f"for {len(all_combinations)} class combinations.", flush=True)
     for (bio1, bio2), (mc1, mc2) in tqdm(all_combinations):
@@ -167,23 +187,23 @@ def compute(
 
         ### SELECT K ##############################################################
         if K is None:
-            print("Compute optimal number of clusters via silhouette scores", flush=True)
             Ks = np.linspace(minK, maxK, maxK-minK+1, dtype=int)
             silhouette_scores = compute_silhouette_score_K(Z_norm, Ks, metric, 1337)
-            K  = Ks[np.argmax(silhouette_scores)]
-            print(f"... optimal number of clusters: [{minK}, {maxK}] -> K = {K}.", flush=True)
+            sel_K.append(int(Ks[np.argmax(silhouette_scores)]))
             res_df = pd.DataFrame(
                 data=zip([cc_str] * len(Ks), Ks, silhouette_scores),
                 columns=["combination", "K", "silhouette_score"],
             )
             all_silhouette_scores = pd.concat([all_silhouette_scores, res_df], axis=0, ignore_index=True)
+        else:
+            sel_K.append(K)
         ###########################################################################
 
         Aris = np.zeros([num_trials, 3])
-        for t in range(num_trials):
+        for t in tqdm(list(range(num_trials)), desc="Computing ARIs"):
             rnd_seed = 1337 + t
             ### CLUSTERING WITH OPT. K ################################################
-            kmeans = KMeans(n_clusters=K, random_state=rnd_seed, n_init=5, init='random').fit(Z_norm)
+            kmeans = KMeans(n_clusters=sel_K[-1], random_state=rnd_seed, n_init=5, init='random').fit(Z_norm)
             cluster_labels = kmeans.labels_
             ###########################################################################
 
@@ -200,9 +220,11 @@ def compute(
     all_silhouette_scores.to_csv(results_dir / "silhouette_scores.csv", index=False)
     all_aris.to_csv(results_dir / "aris.csv", index=False)
     res_agg = {
-        "clustering_score_mean": all_aris["clustering_score"].mean(),
-        "clustering_score_std": all_aris["clustering_score"].std(),
-        "K": int(K),
+        # Mean of the per combination means
+        "clustering_score_mean": all_aris.groupby("combination")["clustering_score"].mean().mean().item(),
+        # Mean of the per combination standard deviations
+        "clustering_score_mean_std": all_aris.groupby("combination")["clustering_score"].std().mean().item(),
+        "Ks": {"min": min(sel_K), "median": np.median(sel_K).item(), "max": max(sel_K)},
         "num_combinations": len(all_combinations),
         "num_trials": num_trials,
     }
@@ -210,16 +232,19 @@ def compute(
         json.dump(res_agg, f, indent=4)
     print(
         f"Clustering score for model '{model}' on dataset '{dataset}': "
-        f"{np.round(res_agg['clustering_score_mean'], 5)} +- {np.round(res_agg['clustering_score_std'], 5)} "
+        f"{np.round(res_agg['clustering_score_mean'], 5)} +- {np.round(res_agg['clustering_score_mean_std'], 5)} "
         f"(mean +- std.)"
     )
+    return res_agg
 
 
 def compute_all(args_dict):
     datasets = args_dict.pop('datasets')
+    if datasets is None:
+        datasets = FeatureDataManager(features_dir=args_dict["features_dir"]).get_available_datasets(args_dict["model"])
     print(f"Start clustering score calculation for model '{args_dict['model']}' on datasets: {datasets}.")
     for dataset in datasets:
-        compute(**args_dict, dataset=dataset)
+        _ = compute(**args_dict, dataset=dataset)
 
 
 if __name__ == '__main__':

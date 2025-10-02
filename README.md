@@ -2,7 +2,7 @@
 
 [Preprint](https://arxiv.org/abs/2507.17845) | [Hugging Face](https://huggingface.co/collections/bifold-pathomics/pathorob-6899f50a714f446d0c974f87) |  [User Guide](#user-guide) | [Licenses](#licenses) | [Cite](#how-to-cite)
 
-**PathoROB is a benchmark for the robustness of pathology foundation models (FMs) to non-biological features.**
+**PathoROB is a benchmark for the robustness of pathology foundation models (FMs) to non-biological medical center differences.**
 
 ![PathoROB pipeline](docs/pathorob_pipeline.png)
 
@@ -14,36 +14,66 @@ non-biological features.
 
 ![PathoROB overview](docs/pathorob_overview.png)
 
-## Leaderboard
+## Leaderboard: Robustness Index
 
-**TODO add tables**
+| Rank | Foundation Model | TCGA 2x2 | Camelyon | Tolkach ESCA | Average (↓) |
+|------|:-----------------|---------:|---------:|-------------:|------------:|
+| 1    | Virchow2         |    0.848 |    0.806 |        0.955 |       0.870 |
+| 2    | CONCHv1.5        |    0.853 |    0.774 |        0.951 |       0.859 |
+| 3    | Atlas            |    0.846 |    0.785 |        0.938 |       0.856 |
+| 4    | Virchow          |    0.789 |    0.751 |        0.932 |       0.824 |
+| 5    | H0-mini          |    0.816 |    0.718 |        0.932 |       0.822 |
+| 6    | H-optimus-0      |    0.838 |    0.705 |        0.918 |       0.820 |
+| 7    | CONCH            |    0.847 |    0.662 |        0.951 |       0.820 |
+| 8    | UNI2-h           |    0.836 |    0.544 |        0.923 |       0.768 |
+| 9    | MUSK             |    0.749 |    0.467 |        0.928 |       0.715 |
+| 10   | HIPT             |    0.622 |    0.649 |        0.726 |       0.666 |
+| 11   | Prov-GigaPath    |    0.768 |    0.399 |        0.754 |       0.640 |
+| 12   | Kaiko ViT-B/8    |    0.788 |    0.147 |        0.896 |       0.610 |
+| 13   | UNI              |    0.775 |    0.145 |        0.902 |       0.607 |
+| 14   | RetCCL           |    0.609 |    0.318 |        0.878 |       0.602 |
+| 15   | CTransPath       |    0.677 |    0.106 |        0.872 |       0.552 |
+| 16   | Kang-DINO        |    0.685 |    0.043 |        0.832 |       0.520 |
+| 17   | RudolfV          |    0.611 |    0.184 |        0.695 |       0.497 |
+| 18   | Phikon           |    0.648 |    0.011 |        0.795 |       0.485 |
+| 19   | Phikon-v2        |    0.648 |    0.019 |        0.768 |       0.478 |
+| 20   | Ciga             |    0.523 |    0.135 |        0.693 |       0.450 |
+
+All results were computed as part of our benchmarking study. For details as well as for the APD and clustering score results, please check our [preprint](https://arxiv.org/abs/2507.17845). 
+
+> [!Note]
+> If you want your model to be added, please [contact](#contact) us.
+
 
 ## User guide
 
 ### Installation
 
 ```shell
+git clone https://github.com/bifold-pathomics/PathoROB.git
+cd PathoROB
 conda create -n "pathorob" python=3.10 -y
 conda activate pathorob
 pip install -r requirements.txt
 ```
 
 > [!Note]
-> To ensure that the conda environment does not contain any user-specific site packages (e.g., from ~/.local/lib), run `export PYTHONNOUSERSITE=1` after activating your environment.
+> To ensure that the conda environment does not contain any user-specific site packages (e.g., from `~/.local/lib`), run `export PYTHONNOUSERSITE=1` after activating your environment.
 
 
 ### Feature extraction
 
+```shell
+python3 -m pathorob.features.extract_features --model uni2h_clsmean --model_args '{"hf_token": "<TOKEN>"}'
 ```
-python3 -m pathorob.features.extract_features \
---model uni2h_clsmean \
---model_args '{"hf_token": "<TOKEN>"}'
-```
+
+For feature extraction, ~100K images (~2GB) will be downloaded from [Hugging Face](https://huggingface.co/collections/bifold-pathomics/pathorob-6899f50a714f446d0c974f87). 
 
 - Results: `data/features/uni2h_clsmean`
+- Datasets: Per default, features for all PathoROB datasets will be extracted (`camelyon`, `tcga`, `tolkach_esca`). To select any subset of these, use `--datasets <dataset1> ...`.
 - Further arguments: `pathorob/features/extract_features.py`
 
-### Running the benchmark
+### Benchmark metrics
 
 #### (1) Robustness Index
 
@@ -58,19 +88,17 @@ python3 -m pathorob.robustness_index.robustness_index \
 
 #### (2) Average Performance Drop (APD)
 
-```
-python3 -m pathorob.apd.apd \
---model uni2h_clsmean \
---datasets { camelyon tcga tolkach_esca }
+```shell
+python3 -m pathorob.apd.apd --model uni2h_clsmean
 ```
 
-- Results: `results/apd`
-   - {model}/{dataset}_raw.json per {dataset}:
+- Results: `results/apd` (see example results here)
+   - `{model}/{dataset}_raw.json` per {dataset}:
       - In-/out-of-domain accuracies per split and trail.
-   - {model}/{dataset}_summary.json per {dataset}:
-      - In-/out-of-domain APDs for the specific {dataset}.
+   - `{model}/{dataset}_summary.json` per {dataset}:
+      - In-/out-of-domain APDs for the specific dataset.
       - In-/out-of-domain accuracy means per split averaged over trails.
-   - {model}/aggregated_summary.json:
+   - `{model}/aggregated_summary.json`:
       - In-/out-of-domain APDs with 95% confidence intervals over all specified datasets.
 - Further arguments: `pathorob/apd/apd.py`
 
@@ -80,7 +108,13 @@ python3 -m pathorob.apd.apd \
 python3 -m pathorob.clustering_score.clustering_score --model uni2h_clsmean
 ```
 
-- Results: `results/clustering_score`
+- Results: `results/clustering_score` (see example results here)
+   - `{model}/{dataset}/results_summary.json`:
+     - Summary of the results including the final clustering score. 
+   - `{model}/{dataset}/aris.csv`:
+     - Raw Adjusted Rand Index (ARI) and clustering scores for all for repetitions.
+   - `{model}/{dataset}/silhouette_scores.csv`:
+     - Raw silhouette scores to select the optimal K for clustering.
 - Further arguments: `pathorob/clustering_score/clustering_score.py`
 
 ### Adding your own model
@@ -166,11 +200,11 @@ If you have questions or feedback, please contact:
 
 If you find **PathoROB** useful, please cite our preprint:
 ```
-@article{komen2025pathorob,
-  title={Towards Robust Foundation Models for Digital Pathology},
-  author={K{\"o}men, Jonah and de Jong, Edwin D and Hense, Julius and Marienwald, Hannah and Dippel, Jonas and Naumann, Philip and Marcus, Eric and Ruff, Lukas and Alber, Maximilian and Teuwen, Jonas and others},
-  journal={arXiv preprint arXiv:2507.17845},
-  year={2025}
+@article{koemen2025pathorob,
+    title={Towards Robust Foundation Models for Digital Pathology},
+    author={K{\"o}men, Jonah and de Jong, Edwin D and Hense, Julius and Marienwald, Hannah and Dippel, Jonas and Naumann, Philip and Marcus, Eric and Ruff, Lukas and Alber, Maximilian and Teuwen, Jonas and others},
+    journal={arXiv preprint arXiv:2507.17845},
+    year={2025}
 }
 ```
 
@@ -179,14 +213,14 @@ Please also cite the source publications of _all_ PathoROB datasets that you use
 - **Camelyon** (Source: [CAMELYON16](https://camelyon16.grand-challenge.org/) and [CAMELYON17](https://camelyon17.grand-challenge.org/Home/), License: CC0 1.0)
 ```
 @article{bejnordi2017camelyon16,
-    title = {Diagnostic Assessment of Deep Learning Algorithms for Detection of Lymph Node Metastases in Women With Breast Cancer},
-    author = {Ehteshami Bejnordi, Babak and Veta, Mitko and Johannes van Diest, Paul and van Ginneken, Bram and Karssemeijer, Nico and Litjens, Geert and van der Laak, Jeroen A. W. M. and and the CAMELYON16 Consortium},
-    journal = {JAMA},
-    year = {2017},
-    volume = {318},
-    number = {22},
-    pages = {2199-2210},
-    doi = {10.1001/jama.2017.14585}
+    title={Diagnostic Assessment of Deep Learning Algorithms for Detection of Lymph Node Metastases in Women With Breast Cancer},
+    author={Ehteshami Bejnordi, Babak and Veta, Mitko and Johannes van Diest, Paul and van Ginneken, Bram and Karssemeijer, Nico and Litjens, Geert and van der Laak, Jeroen A. W. M. and and the CAMELYON16 Consortium},
+    journal={JAMA},
+    year={2017},
+    volume={318},
+    number={22},
+    pages={2199-2210},
+    doi={10.1001/jama.2017.14585}
 }
 ```
 ```
@@ -205,14 +239,14 @@ Please also cite the source publications of _all_ PathoROB datasets that you use
 - **TCGA** (Source: [TCGA-UT](https://zenodo.org/records/5889558), License: CC-BY-NC-SA 4.0)
 ```
 @article{komura22tcga-ut,
-    title = {Universal encoding of pan-cancer histology by deep texture representations},
-    author = {Daisuke Komura and Akihiro Kawabe and Keisuke Fukuta and Kyohei Sano and Toshikazu Umezaki and Hirotomo Koda and Ryohei Suzuki and Ken Tominaga and Mieko Ochi and Hiroki Konishi and Fumiya Masakado and Noriyuki Saito and Yasuyoshi Sato and Takumi Onoyama and Shu Nishida and Genta Furuya and Hiroto Katoh and Hiroharu Yamashita and Kazuhiro Kakimi and Yasuyuki Seto and Tetsuo Ushiku and Masashi Fukayama and Shumpei Ishikawa},
-    journal = {Cell Reports},
-    year = {2022},
-    volume = {38},
-    number = {9},
-    pages = {110424},
-    doi = {https://doi.org/10.1016/j.celrep.2022.110424}
+    title={Universal encoding of pan-cancer histology by deep texture representations},
+    author={Daisuke Komura and Akihiro Kawabe and Keisuke Fukuta and Kyohei Sano and Toshikazu Umezaki and Hirotomo Koda and Ryohei Suzuki and Ken Tominaga and Mieko Ochi and Hiroki Konishi and Fumiya Masakado and Noriyuki Saito and Yasuyoshi Sato and Takumi Onoyama and Shu Nishida and Genta Furuya and Hiroto Katoh and Hiroharu Yamashita and Kazuhiro Kakimi and Yasuyuki Seto and Tetsuo Ushiku and Masashi Fukayama and Shumpei Ishikawa},
+    journal={Cell Reports},
+    year={2022},
+    volume={38},
+    number={9},
+    pages={110424},
+    doi={https://doi.org/10.1016/j.celrep.2022.110424}
 }
 ```
 

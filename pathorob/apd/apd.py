@@ -8,7 +8,7 @@ import pandas as pd
 from scipy import stats
 from tqdm import trange
 
-from pathorob.features.constants import AVAILABLE_DATASETS
+from pathorob.features.data_manager import FeatureDataManager
 from pathorob.apd.train_model import train_logistic_regression
 from pathorob.apd.utils import load_data, get_patches_map_to_split, compute_apd, compute_corrected_scores, load_results
 
@@ -18,11 +18,12 @@ def get_args():
     # Required arguments
     parser.add_argument("--model", type=str, required=True)
     # Optional arguments
-    parser.add_argument("--datasets", type=str, nargs="+", default=AVAILABLE_DATASETS)
+    parser.add_argument("--datasets", type=str, nargs="+", default=None)
     parser.add_argument("--features_dir", type=str, default="data/features")
     parser.add_argument("--metadata_dir", type=str, default="data/metadata")
     parser.add_argument("--results_dir", type=str, default="results/apd")
     parser.add_argument("--iterations", type=int, default=20)
+    parser.add_argument("--overwrite_results", action="store_true")
     return parser.parse_args()
 
 
@@ -123,31 +124,46 @@ def compute(
     print(f"\nIn-domain APD: {np.round(apds['apd_id'] * 100, 3)}% and out-of-domain APD: {np.round(apds['apd_ood'] * 100, 3)}% for model '{model}' on '{dataset}'.")
 
 
+def compute_all(args_dict):
+    datasets = args_dict.pop('datasets')
+    overwrite_results = args_dict.pop('overwrite_results')
+    manager = FeatureDataManager(features_dir=args_dict['features_dir'], metadata_dir=args_dict['metadata_dir'])
+    if datasets == None:
+        datasets = manager.get_available_datasets(args_dict['model'])
+        
+    print(f"Start APD calculation for model '{args_dict['model']}' on datasets: {datasets}\n")
+    for dataset in datasets:
+        if (
+            (Path(args_dict['results_dir']) / args_dict['model'] / f'{dataset}_summary.json').exists()
+            and (Path(args_dict['results_dir']) / args_dict['model'] / f'{dataset}_raw.json').exists()
+            and not overwrite_results
+        ):
+            print(f"Result files for {dataset} already exist; skip recalculation (if you want to enforce recalculation set '--overwrite_results')")
+            continue
+        compute(**args_dict, dataset=dataset)
+
+    if datasets == manager.get_available_datasets(args_dict['model']):
+        print(f"\nCompute APD over all specified datasets: {datasets}")
+        res_df = load_results(args_dict['results_dir'], args_dict['model'], datasets)
+    
+        # Compute corrected scores
+        id_res_df = compute_corrected_scores(res_df[res_df["domain"] == "ID"])
+        ood_res_df = compute_corrected_scores(res_df[res_df["domain"] == "OOD"])
+    
+        # Get APD with 95% confidence intervals
+        stats_ID = id_res_df["corrected_scores"].agg(["mean", "sem"])
+        stats_OOD = ood_res_df["corrected_scores"].agg(["mean", "sem"])
+        apd_id, ci_id = stats_ID["mean"], stats.t.ppf(0.975, df=len(id_res_df)) * stats_ID["sem"]
+        apd_ood, ci_ood = stats_OOD["mean"], stats.t.ppf(0.975, df=len(ood_res_df)) * stats_OOD["sem"]
+    
+        apds_all_datasets = {'aggregation_datasets': datasets, 'apd_id': apd_id, 'ci_id': ci_id, 'apd_ood': apd_ood, 'ci_ood': ci_ood}
+    
+        (Path(args_dict['results_dir']) / args_dict['model']).mkdir(parents=True, exist_ok=True)
+        with open(Path(args_dict['results_dir']) / args_dict['model'] / 'aggregated_summary.json', 'w') as file:
+            json.dump(apds_all_datasets, file, indent=4)
+        
+        print(f"In-domain APD: {np.round(apd_id * 100, 3)}% (confidence interval: +-{np.round(ci_id * 100, 3)}) and out-of-domain APD: {np.round(apd_ood * 100, 3)}% (confidence interval: +-{np.round(ci_ood * 100, 3)})")
+
+        
 if __name__ == '__main__':
-    arguments = vars(get_args())
-    print(f"Start APD calculation for model: {arguments['model']} on datasets: {arguments['datasets']}\n")
-    for dataset in arguments['datasets']:
-        args = {**arguments, "dataset": dataset}
-        args.pop("datasets")
-        compute(**args)
-    
-    print(f"\nCompute APD over all specified datasets: {arguments['datasets']}")
-    res_df = load_results(arguments['results_dir'], arguments['model'], arguments['datasets'])
-
-    # Compute corrected scores
-    id_res_df = compute_corrected_scores(res_df[res_df["domain"] == "ID"])
-    ood_res_df = compute_corrected_scores(res_df[res_df["domain"] == "OOD"])
-
-    # Get APD with 95% confidence intervals
-    stats_ID = id_res_df["corrected_scores"].agg(["mean", "sem"])
-    stats_OOD = ood_res_df["corrected_scores"].agg(["mean", "sem"])
-    apd_id, ci_id = stats_ID["mean"], stats.t.ppf(0.975, df=len(id_res_df)) * stats_ID["sem"]
-    apd_ood, ci_ood = stats_OOD["mean"], stats.t.ppf(0.975, df=len(ood_res_df)) * stats_OOD["sem"]
-
-    apds_all_datasets = {'apd_id': apd_id, 'ci_id': ci_id, 'apd_ood': apd_ood, 'ci_ood': ci_ood}
-
-    (Path(arguments['results_dir']) / arguments['model']).mkdir(parents=True, exist_ok=True)
-    with open(Path(arguments['results_dir']) / arguments['model'] / 'aggregated_summary.json', 'w') as file:
-        json.dump(apds_all_datasets, file, indent=4)
-    
-    print(f"In-domain APD: {np.round(apd_id * 100, 3)}% (confidence interval: +-{np.round(ci_id * 100, 3)}) and out-of-domain APD: {np.round(apd_ood * 100, 3)}% (confidence interval: +-{np.round(ci_ood * 100, 3)})")
+    compute_all(vars(get_args()))
