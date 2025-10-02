@@ -168,7 +168,7 @@ class MyModelWrapper(ModelWrapper):
 
 ## Latest updates
 
-- September 2025: PathoROB is now available on Hugging Face and GitHub. 
+- October 2025: PathoROB is now available on Hugging Face and GitHub. 
 
 ## Licenses
 
