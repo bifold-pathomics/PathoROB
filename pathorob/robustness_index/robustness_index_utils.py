@@ -1,6 +1,9 @@
 import copy
+import json
 import os
 import pickle
+from enum import StrEnum
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -8,6 +11,12 @@ from matplotlib import pyplot as plt
 from sklearn.metrics import roc_auc_score, balanced_accuracy_score
 from sklearn.neighbors import KNeighborsClassifier
 from scipy.stats import mode
+
+
+class OutputFiles(StrEnum):
+    SUMMARY = "results_summary.json"
+    BALANCED_ACCURACIES = "balanced-accuracies-bio.csv"
+    FREQUENCIES = "frequencies-same-class.pkl"
 
 
 def bootstrapped_robustness_index(SO_cum, OS_cum, n_bootstrap = 1000):
@@ -445,8 +454,10 @@ def filter_out_query_case_from_neighbors(meta, dataset, knn_indices, X_train, X_
     return knn_indices
 
 def evaluate_knn_accuracy(meta, dataset, X_train, X_test, y_train, y_test, n_neighbors, num_workers, knn_distances=None, knn_indices=None, do_checks=False):
+    max_samples_per_group = int(np.max(meta["slide_id"].value_counts().values))
+    n_neighbors_with_margin = n_neighbors + max_samples_per_group #ensure sufficient neighbors will be left after removing neighbors from query case below
     knn_model = KNeighborsClassifier(
-        n_neighbors=n_neighbors, n_jobs=num_workers
+        n_neighbors=n_neighbors_with_margin, n_jobs=num_workers
     )
 
     if do_checks:
@@ -477,10 +488,9 @@ def evaluate_knn_accuracy(meta, dataset, X_train, X_test, y_train, y_test, n_nei
     return balanced_accuracy, auc_per_class, knn_distances, knn_indices, effective_n_neighbors
 
 
-def get_k_values(dataset, paired_evaluation, opt_k=None, max_samples_per_group=0):
+def get_k_values(dataset, paired_evaluation, opt_k=0):
     if opt_k and opt_k > 0:
-        margin = max_samples_per_group
-        k_values = np.array([opt_k + margin])
+        k_values = np.array([opt_k])
         return k_values
     else:
         max_k = get_max_k(dataset, paired_evaluation)
@@ -569,6 +579,19 @@ def evaluate_embeddings(dataset, meta_sel, knn_indices):
     return stats
 
 
+def convert_types_in_stats(stats):
+    for k, v in stats.items():
+        if isinstance(v, np.ndarray):
+            stats[k] = v.tolist()
+        elif isinstance(v, (np.integer, np.int64)):
+            stats[k] = int(v)
+        elif isinstance(v, (np.floating, np.float64)):
+            stats[k] = float(v)
+        else:
+            stats[k] = v
+    return stats
+
+
 def save_total_stats(stats, meta, dataset, model, results_folder, k_opt, bal_acc_at_k_opt):
     stats['k_opt'] = k_opt #store k_opt in stats
     stats['bal_acc_at_k_opt'] = bal_acc_at_k_opt #store max bal acc, obtained using k = k_opt
@@ -579,22 +602,29 @@ def save_total_stats(stats, meta, dataset, model, results_folder, k_opt, bal_acc
     df_dict["OOD_performance-k_opt"] = stats["OOD_performance"][index_k_opt]
     df_dict["generalization_index-k_opt"] = stats["generalization_index"][index_k_opt]
     df_dict["SO_SS_ratio-k_opt"] = stats["SO_SS_ratio"][index_k_opt]
+
     if "robustness_index-mean" in stats and len(stats["robustness_index-mean"]) > index_k_opt:
         stats["robustness_index-mean-k_opt"] = stats["robustness_index-mean"][index_k_opt]
         stats["robustness_index-std-k_opt"] = stats["robustness_index-mean"][index_k_opt]
         df_dict["robustness_index-mean-k_opt"] = stats["robustness_index-mean-k_opt"]
         df_dict["robustness_index-std-k_opt"] = stats["robustness_index-std-k_opt"]
+
     biological_class_field, confounding_class_field = get_field_names_given_dataset(dataset)
     all_bio_classes = np.unique(meta[biological_class_field].values)
     all_conf_classes = np.unique(meta[confounding_class_field].values)
-    fn = os.path.join(results_folder, f'frequencies-same-class-{model}.pkl')
+
+    fn = results_folder / OutputFiles.FREQUENCIES
     with open(fn, 'wb') as f:
         pickle.dump({'stats': stats, 'all_bio_classes': all_bio_classes, 'all_conf_classes': all_conf_classes}, f)
     print(f'saved results to {fn}')
-    fn = os.path.join(results_folder, f'results-summary-{model}.csv')
-    df = pd.DataFrame(df_dict, index=[0])
-    df.to_csv(fn, index=False)
-    print(f'saved results summary to {fn}')
+
+    # Store summary file
+    output_file = os.path.join(results_folder, OutputFiles.SUMMARY)
+    df_dict = convert_types_in_stats(df_dict)
+    with open(output_file, 'w') as f:
+        json.dump(df_dict, f, indent=4)
+
+    print(f'saved results summary to {output_file}')
     return stats
 
 def plot_3a_optimal_k_per_model(model, k_values_sel, bal_accs, k_opt, fig_folder):
@@ -602,50 +632,17 @@ def plot_3a_optimal_k_per_model(model, k_values_sel, bal_accs, k_opt, fig_folder
     plt.xlabel("k")
     plt.ylabel("Balanced accuracy")
     plt.title(f"Balanced accuracy vs k value for {model}\nOptimal k: {k_opt}")
-    fn = os.path.join(fig_folder, f'3a-optimal-k-{model}.png')
+    fn = os.path.join(fig_folder, f'3a-optimal-k.png')
     plt.savefig(fn, dpi=600)
     print(f"saved optimal k to {fn}")
     plt.close()
 
-def plot_results_per_model(meta, total_stats, accuracies_bio, k_values, model, results_folder, fig_folder, dataset, bal_accs, k_opt):
-    plot_3_optimal_k_per_model(accuracies_bio, k_values, model, results_folder, fig_folder)
+
+def plot_results_per_model(total_stats, k_values, model, fig_folder, dataset, bal_accs, k_opt):
+    plot_3a_optimal_k_per_model(model, k_values, bal_accs, k_opt, fig_folder)
     plot_4a_freq_4_combinations_per_model(total_stats, fig_folder, dataset, model)
     plot_4b_freq_4_combinations_per_model_cum(total_stats, fig_folder, dataset, model)
     plot_4d_freq_2_combinations_per_model(total_stats, fig_folder, dataset, model)
-    plot_3a_optimal_k_per_model(model, k_values, bal_accs, k_opt, fig_folder)
-
-def plot_3_optimal_k_per_model(accuracies_bio, k_values, model, results_folder, fig_folder):
-
-    print(f"scores nr rows: {len(accuracies_bio)} len {len(accuracies_bio[0])}")
-    min_row_length = np.min([len(row) for row in accuracies_bio])
-    accuracies_bio_list = [row[:min_row_length] for row in accuracies_bio]
-    k_values_sel = k_values[:min_row_length]
-
-    accuracies_bio = np.vstack(accuracies_bio_list)
-    avg_acc_bio = np.mean(accuracies_bio, axis=0)
-    std_acc_bio = np.std(accuracies_bio, axis=0)
-
-    res = pd.DataFrame({"k": k_values_sel, "bal_acc": avg_acc_bio, "std": std_acc_bio})
-    fn = os.path.join(results_folder, f'bal-acc-bio-{model}.csv')
-    res.to_csv(fn, index=False)
-    print(f'saved accuracies to {fn}', flush=True)
-
-    index_opt_k = np.argmax(avg_acc_bio)
-    k_opt = k_values_sel[index_opt_k]
-    print(f"optimal k for model {model}: {k_opt}")
-
-    print(f"optimal k for model {model}: {k_opt}")
-    plt.plot(k_values_sel, avg_acc_bio)
-    plt.fill_between(k_values_sel, avg_acc_bio - std_acc_bio, avg_acc_bio + std_acc_bio, alpha=0.2)
-    plt.xlabel("k")
-    plt.ylabel("Balanced Accuracy")
-    plt.title(f"Balanced Accuracy vs k value for {model}\nOptimal k: {k_opt}")
-    fn = os.path.join(fig_folder, f'3-optimal-k-{model}.png')
-    plt.savefig(fn, dpi=600)
-    print(f"saved optimal k to {fn}")
-    plt.close()
-    return k_opt, res
-
 
 
 def plot_4a_freq_4_combinations_per_model(stats, fig_folder, dataset, model):
@@ -658,13 +655,13 @@ def plot_4a_freq_4_combinations_per_model(stats, fig_folder, dataset, model):
     plt.ylim([0,1])
     plt.title(f"Frequency of same / other biological / confounding class\n{dataset} {model}")
     plt.savefig('/tmp/stats-all-frequencies.png')
-    fn = os.path.join(fig_folder, f'4a-freq-4-combinations-knn-neighbor-k-{dataset}-{model}.png')
+    fn = os.path.join(fig_folder, f'4a-freq-4-combinations-knn-neighbor-k.png')
     plt.savefig(fn, dpi=600)
     print(f"saved frequencies 4 combinations plot to {fn}", flush=True)
 
     res = {f'fraction_{combi}-norm': stats[f'fraction_{combi}-norm'] for combi in ['SS', 'SO', 'OS', 'OO']}
     df = pd.DataFrame(res)
-    fn = os.path.join(fig_folder, f'4a-freq-4-combinations-knn-neighbor-k-{dataset}-{model}.csv')
+    fn = os.path.join(fig_folder, f'4a-freq-4-combinations-knn-neighbor-k.csv')
     df.to_csv(fn, index=False)
     print(f"saved frequencies 4 combinations df to {fn}", flush=True)
 
@@ -681,13 +678,13 @@ def plot_4b_freq_4_combinations_per_model_cum(stats, fig_folder, dataset, model)
     plt.ylim([0,1])
     plt.title(f"Frequency of same / other biological / confounding class\n{dataset} {model}")
     plt.savefig('/tmp/stats-all-frequencies.png')
-    fn = os.path.join(fig_folder, f'4b-freq-4-combinations-knn-neighbor-k-sum-{dataset}-{model}.png')
+    fn = os.path.join(fig_folder, f'4b-freq-4-combinations-knn-neighbor-k-sum.png')
     plt.savefig(fn, dpi=600)
     print(f"saved frequencies 4 combinations plot to {fn}", flush=True)
 
     res = {f'fraction_{combi}-cum-norm': stats[f'fraction_{combi}-cum-norm'] for combi in ['SS', 'SO', 'OS', 'OO']}
     df = pd.DataFrame(res)
-    fn = os.path.join(fig_folder, f'4b-freq-4-combinations-knn-{dataset}-{model}.csv')
+    fn = os.path.join(fig_folder, f'4b-freq-4-combinations-knn.csv')
     df.to_csv(fn, index=False)
     print(f"saved frequencies 4 combinations df to {fn}", flush=True)
 
@@ -714,7 +711,7 @@ def plot_4d_freq_2_combinations_per_model(stats, fig_folder, dataset, model):
     plt.ylim([0,1])
     plt.legend()
     plt.title(f"Normalized frequency of same / other biological / confounding class\n{dataset} {model}")
-    fn = os.path.join(fig_folder, f'4d-freq-2-combinations-knn-{dataset}-{model}.png')
+    fn = os.path.join(fig_folder, f'4d-freq-2-combinations-knn.png')
     plt.savefig(fn, dpi=600)
     print(f"saved frequencies 2 combinations plot org to {fn}", flush=True)
     plt.close()
@@ -733,7 +730,7 @@ def plot_4d_freq_2_combinations_per_model(stats, fig_folder, dataset, model):
     plt.ylim([0,1])
     plt.legend()
     plt.title(f"Normalized frequency of same / other biological / confounding class\n{dataset} {model}")
-    fn = os.path.join(fig_folder, f'4e-freq-2-combinations-knn-neighbor-k-{dataset}-{model}-std.png')
+    fn = os.path.join(fig_folder, f'4e-freq-2-combinations-knn-neighbor-k-std.png')
     plt.savefig(fn, dpi=600)
     print(f"saved frequencies 2 combinations plot org with std to {fn}", flush=True)
     plt.close()
@@ -744,7 +741,7 @@ def plot_4d_freq_2_combinations_per_model(stats, fig_folder, dataset, model):
         res["robustness_index-mean"] = stats['robustness_index-mean']
         res["robustness_index-std"] = stats['robustness_index-std']
     df = pd.DataFrame(res)
-    fn = os.path.join(fig_folder, f'4e-freq-2-combinations-knn-neighbor-k-{dataset}-{model}-std.csv')
+    fn = os.path.join(fig_folder, f'4e-freq-2-combinations-knn-neighbor-k-std.csv')
     df.to_csv(fn, index=False)
     print(f"saved frequencies 2 combinations with std df to {fn}", flush=True)
 
@@ -769,6 +766,7 @@ def calculate_per_class_prediction_stats(biological_class_field, confounding_cla
     df.to_csv(fn, index=False)
     print(f'saved aucs per class to {fn}', flush=True)
 
+
 def save_balanced_accuracies(model, accuracies_bio, k_values, results_folder):
     print(f"accuracies_bio nr rows: {len(accuracies_bio)} len {len(accuracies_bio[0])}")
     min_row_length = np.min([len(row) for row in accuracies_bio])
@@ -783,7 +781,7 @@ def save_balanced_accuracies(model, accuracies_bio, k_values, results_folder):
     bal_accs = np.mean(accuracies_bio, axis=0)
     stds = np.std(accuracies_bio, axis=0)
     bio_class_prediction_result = pd.DataFrame({"k": k_values, "bal_acc": bal_accs, "std": stds})
-    fn = os.path.join(results_folder, f'bal-acc-bio-{model}.csv')
+    fn = results_folder / OutputFiles.BALANCED_ACCURACIES
     bio_class_prediction_result.to_csv(fn, index=False)
     print(f'saved bal_accs to {fn}', flush=True)
 
@@ -805,11 +803,11 @@ def aggregate_per_combi(stats, bc):
     return fraction_SS, fraction_SO, fraction_OS, fraction_OO
 
 
-def calculate_robustness_index_at_k_opt(models, results_folder, k_opt):
+def calculate_robustness_index_at_k_opt(models, results_folder, k_opt, options_subfolder):
     k_opt_bio_pred_model = {}
     rob_index_at_k_opt = {}
     for m, model in enumerate(models):
-        fn = os.path.join(results_folder, f'frequencies-same-class-{model}.pkl')
+        fn = get_file_path(results_folder, model, options_subfolder, OutputFiles.FREQUENCIES)
         results = pickle.load(open(fn, 'rb'))
         stats = results['stats']
         k_range = np.array(stats['k'])
@@ -834,8 +832,8 @@ def calculate_robustness_index_at_k_opt(models, results_folder, k_opt):
     return k_opt_bio_pred_model, rob_index_at_k_opt
 
 
-def get_robustness_index_k_range(model, results_folder):
-    stats = get_stats(model, results_folder)
+def get_robustness_index_k_range(model, results_folder, options_subfolder):
+    stats = get_stats(model, results_folder, options_subfolder)
     return np.array(stats["k"]), stats["robustness_index"], stats["robustness_index-mean"], stats["robustness_index-std"]
 
 
@@ -849,7 +847,7 @@ def get_optimal_prediction_results_avg_all_datasets(datasets, models, options):
         for dataset in datasets:
             options_ds = get_default_dataset_options(dataset, options)
             results_folder_ds = options_ds["results_folder"]
-            fn = os.path.join(results_folder_ds, f'bal-acc-bio-{model}.csv') #get bal_acc for biological classification
+            fn = results_folder_ds / OutputFiles.BALANCED_ACCURACIES
             if not os.path.isfile(fn):
                 raise ValueError(f'missing bal_acc file {fn}')
             bal_accs_bio = pd.read_csv(fn)
@@ -887,7 +885,7 @@ def get_optimal_prediction_results_per_dataset(datasets, models, options):
         for dataset in datasets:
             options_ds = get_default_dataset_options(dataset, options)
             results_folder_ds = options_ds["results_folder"]
-            fn = os.path.join(results_folder_ds, f'bal-acc-bio-{model}.csv') #get bal_acc for biological classification
+            fn = results_folder_ds / OutputFiles.BALANCED_ACCURACIES
             if not os.path.isfile(fn):
                 raise ValueError(f'missing bal_acc file {fn}')
             bal_accs_bio = pd.read_csv(fn)
@@ -921,7 +919,7 @@ def get_robustness_results_median_k_opt_per_dataset(datasets, models, options):
             if not model in robustness_index_vectors:
                 robustness_index_vectors[model] = {}
             options_tmp = get_default_dataset_options(dataset, options)
-            results_folder, fig_folder = get_folder_paths(options_tmp, dataset)
+            results_folder, fig_folder = get_folder_paths(options_tmp, dataset, model)
             stats = get_stats(model, results_folder)
             k_range, robustness_index, _, robustness_index_std = get_robustness_index_k_range(model, results_folder)
             k_opt = int(stats['k_opt'])
@@ -972,7 +970,7 @@ def get_robustness_results_all_datasets(datasets, models, options):
         k_opt_values = []
         for dataset in datasets:
             options_tmp = get_default_dataset_options(dataset, options)
-            results_folder, fig_folder = get_folder_paths(options_tmp, dataset)
+            results_folder, fig_folder = get_folder_paths(options_tmp, dataset, model)
             k_range, robustness_index, _, robustness_index_std = get_robustness_index_k_range(model, results_folder)
 
             if k_range is None:
@@ -1005,7 +1003,7 @@ def get_robustness_results_per_dataset(datasets, models, options):
         model_robustness_index[model] = {}
         for dataset in datasets:
             options_tmp = get_default_dataset_options(dataset, options)
-            results_folder, fig_folder = get_folder_paths(options_tmp, dataset)
+            results_folder, fig_folder = get_folder_paths(options_tmp, dataset, model)
             k_range, robustness_index, _, robustness_index_std = get_robustness_index_k_range(model, results_folder)
             if k_range is None:
                 print(f"skipping model {model} for dataset {dataset}")
@@ -1018,11 +1016,8 @@ def get_model_colors(models):
     return [[float(k) for k in plt.get_cmap("tab20")(i)] for i in range(len(models))]
 
 
-def get_stats(model, results_folder):
-    fn = os.path.join(results_folder, f'frequencies-same-class-{model}.pkl')
-    if not os.path.exists(fn):
-        print(f"file not found: {fn}")
-        return None, None, None
+def get_stats(model, results_folder, options_subfolder):
+    fn = get_file_path(results_folder, model, options_subfolder, OutputFiles.FREQUENCIES)
     results = pickle.load(open(fn, 'rb'))
     stats = results['stats']
     return stats
@@ -1032,7 +1027,6 @@ def get_default_dataset_options(dataset, options):
     options_tmp = copy.deepcopy(options)
     max_patches_per_combi_model = {"tcga-uniform-subset": -1, "tcga-2k": -1, "tcga-4x4": -1, "camelyon16": -1, "camelyon17": -1, "tolkach-esca": -1}
     options_tmp["max_patches_per_combi"] = max_patches_per_combi_model[dataset]
-    get_folder_paths(options_tmp, dataset)
     return options_tmp
 
 
@@ -1041,9 +1035,9 @@ def get_k_opt_per_dataset(datasets, models, options):
     for dataset in datasets:
         k_opts_per_dataset[dataset] = {}
         options_tmp = get_default_dataset_options(dataset, options)
-        results_folder, fig_folder = get_folder_paths(options_tmp, dataset)
         k_opts = []
         for model in models:
+            results_folder, fig_folder = get_folder_paths(options_tmp, dataset, model)
             stats = get_stats(model, results_folder)
             if stats is not None:
                 k_opt = int(stats['k_opt'])
@@ -1056,31 +1050,62 @@ def get_k_opt_per_dataset(datasets, models, options):
     return k_opts_per_dataset
 
 
-def get_folder_paths(options, dataset):
-    results_dir = options["results_dir"]
-    figures_dir = options["figures_dir"]
+def get_folder_paths(options, dataset, model):
+    results_folder = Path(options["results_dir"])
+    fig_subfolder = Path(options["figures_subdir"])
     max_patches_per_combi = options["max_patches_per_combi"]
     k_opt_param = options["k_opt_param"]
 
-    results_folder = results_dir
-    fig_folder = figures_dir
+    args_subfolder = f"{max_patches_per_combi}_{k_opt_param}"
 
     if options["DBG"]:
-        results_folder= os.path.join(results_folder, "debug")
-        fig_folder = os.path.join(fig_folder, "debug")
+        results_folder = results_folder / "debug"
 
-    results_folder = os.path.join(results_folder, dataset)
-    fig_folder = os.path.join(fig_folder, dataset)
-
-    results_folder = results_folder + f"-{max_patches_per_combi}"
-    fig_folder = fig_folder + f"-{max_patches_per_combi}"
-
-    results_folder = results_folder + f"-{k_opt_param}"
-    fig_folder = fig_folder + f"-{k_opt_param}"
+    results_folder = results_folder / model / dataset / args_subfolder
+    fig_folder = results_folder / fig_subfolder
 
     print(f"using results_folder: {results_folder}, fig_folder: {fig_folder}")
 
     options["results_folder"] = results_folder
     options["fig_folder"] = fig_folder
 
+    results_folder.mkdir(parents=True, exist_ok=True)
+    fig_folder.mkdir(parents=True, exist_ok=True)
+
     return results_folder, fig_folder
+
+
+def get_generic_folder_paths(options, dataset):
+    results_folder = Path(options["results_dir"])
+    fig_subfolder = Path(options["figures_subdir"])
+    max_patches_per_combi = options["max_patches_per_combi"]
+    k_opt_param = options["k_opt_param"]
+
+    args_subfolder = f"{max_patches_per_combi}_{k_opt_param}"
+
+    fig_folder = results_folder / fig_subfolder / dataset / args_subfolder
+    options_subfolder = Path(dataset) / args_subfolder
+
+    print(f"using results_folder: {results_folder}, fig_folder: {fig_folder}")
+
+    options["results_folder"] = results_folder
+    options["fig_folder"] = fig_folder
+
+    results_folder.mkdir(parents=True, exist_ok=True)
+    fig_folder.mkdir(parents=True, exist_ok=True)
+
+    return results_folder, fig_folder, options_subfolder
+
+
+def get_model_names(base_folder: str):
+    base_folder = Path(base_folder)
+    model_folders = [item.stem for item in base_folder.iterdir() if item.is_dir() and item.name != "fig"]
+    return model_folders
+
+
+def get_file_path(results_path, model, options_subfolder, output_file):
+    file_path = results_path / model / options_subfolder / output_file
+    if not file_path.exists():
+        raise ValueError(f'missing file {file_path}')
+    return file_path
+

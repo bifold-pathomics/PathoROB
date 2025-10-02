@@ -1,5 +1,3 @@
-import os
-
 import numpy as np
 from sklearn.preprocessing import LabelEncoder, Normalizer
 
@@ -10,7 +8,7 @@ from pathorob.robustness_index.robustness_index_utils import (
 )
 
 
-def select_optimal_k_value_pairs(dataset, model, patch_names, embeddings, meta, results_folder, fig_folder, num_workers=8, DBG=False, compute_bootstrapped_robustness_index=False, opt_k=-1, plot_graphs=True):
+def select_optimal_k_value_pairs(dataset, model, patch_names, embeddings, meta, results_folder, fig_folder, num_workers=8, DBG=False, compute_bootstrapped_robustness_index=False, opt_k=0, plot_graphs=True):
     project_combis = np.unique(meta.subset.values)
     print(f"nr project_combis {len(project_combis)}")
     biological_class_field, confounding_class_field = get_field_names_given_dataset(dataset)
@@ -32,9 +30,7 @@ def select_optimal_k_value_pairs(dataset, model, patch_names, embeddings, meta, 
             print(f'no patches found for project_combi {project_combi}; continuing')
             continue
 
-        max_samples_per_group = int(np.max(meta_combi["slide_id"].value_counts().values))
-
-        k_values = get_k_values(dataset, True, opt_k, max_samples_per_group)
+        k_values = get_k_values(dataset, True, opt_k)
         if DBG and len(k_values) > 1:
             k_values = [k for k in k_values if k <= 51]  # limit k values for debugging
 
@@ -86,7 +82,7 @@ def select_optimal_k_value_pairs(dataset, model, patch_names, embeddings, meta, 
     total_stats = save_total_stats(total_stats, meta, dataset, model, results_folder, k_opt, bal_acc_at_k_opt)
     calculate_per_class_prediction_stats(biological_class_field, confounding_class_field, bio_classes, model, meta, aucs_per_class_list, k_opt, results_folder)
     if plot_graphs:
-        plot_results_per_model(meta, total_stats, accuracies_bio, effective_k_values, model, results_folder, fig_folder, dataset,
+        plot_results_per_model(total_stats, effective_k_values, model, fig_folder, dataset,
                                bio_class_prediction_result["bal_acc"], k_opt)
     return k_opt, bio_class_prediction_result, total_stats
 
@@ -114,16 +110,3 @@ def evaluate_model_pairs(dataset, data_manager, model, meta, results_folder, fig
 
     return bio_class_prediction_results, robustness_metrics
 
-
-def calc_rob_index_pairs(data_manager, models, dataset, meta, results_folder, fig_folder, num_workers=8, k_opt_param=-1, DBG=False, compute_bootstrapped_robustness_index=False, plot_graphs=True):
-    results = {}
-    robustness_metrics_dict = {}
-    for m,model in enumerate(models):
-        fn = os.path.join(results_folder, f'frequencies-same-class-{model}.pkl')
-        if os.path.exists(fn):
-            print(f"model {model}: results already exist --> skipping. Found {fn}")
-            continue
-        bio_class_prediction_results, robustness_metrics = evaluate_model_pairs(dataset, data_manager, model, meta, results_folder, fig_folder, num_workers=num_workers, k_opt_param=k_opt_param, DBG=DBG, compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index, plot_graphs=plot_graphs)
-        results[model] = bio_class_prediction_results
-        robustness_metrics_dict[model] = robustness_metrics
-    return results, robustness_metrics_dict
