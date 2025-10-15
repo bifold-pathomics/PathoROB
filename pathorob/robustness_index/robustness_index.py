@@ -389,15 +389,16 @@ def results_summary(model, meta, max_patches_per_combi, median_k_opt, results, d
     return result
 
 
-def plot_all_results(models, results_folder, fig_folder, model_k_opt, median_k_opt, dataset, options, plots_wo_legend, options_subfolder):
+def plot_all_results(models, results_folder, fig_folder, model_k_opt, median_k_opt, dataset, options, plots_wo_legend, options_subfolder, k_opt_param):
     boostrapped_robustness_index = options.get("compute_bootstrapped_robustness_index", False)
 
     robustness_graphs.plot11_performance_robustness_tradeoff(models, options, results_folder, fig_folder, model_k_opt, median_k_opt, dataset, options_subfolder)
 
     robustness_graphs.plot_4_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, plots_wo_legend, options_subfolder)
     robustness_graphs.plot_5_freq_bio_vs_conf_all_models(models, results_folder, fig_folder, plots_wo_legend, options_subfolder)
-    _                     , _                = robustness_graphs.plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, True, dataset, boostrapped_robustness_index, plots_wo_legend, options_subfolder)
     robustness_metrics, robustness_index = robustness_graphs.plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, False, dataset,  boostrapped_robustness_index, plots_wo_legend,  options_subfolder) #return this as default below
+    if k_opt_param == -1:
+        _, _ = robustness_graphs.plot_6_robustness_index_all_models(models, results_folder, fig_folder, model_k_opt, median_k_opt, True, dataset, boostrapped_robustness_index, plots_wo_legend, options_subfolder)
 
     plot_all_dataset_results = True
     if plot_all_dataset_results:
@@ -526,12 +527,12 @@ def compare(
         print(f"using fixed k_opt_param {k_opt_param}")
         model_k_opt = {model: k_opt_param for model in models}
         median_k_opt = k_opt_param
-        model_bal_acc_values=None
 
     robustness_metrics, robustness_index = plot_all_results(models, results_folder, fig_folder, model_k_opt, median_k_opt,
-                                                            dataset, options, plots_wo_legend, options_subfolder)
+                                                            dataset, options, plots_wo_legend, options_subfolder, k_opt_param)
 
-    robustness_graphs.pareto_plot(dataset, models, model_bal_acc_values, robustness_metrics, fig_folder)
+    if k_opt_param == -1:
+        robustness_graphs.pareto_plot(dataset, models, model_bal_acc_values, robustness_metrics, fig_folder)
 
 
 def compute_all(args_dict):
