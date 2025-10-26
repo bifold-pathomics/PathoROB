@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from sklearn.preprocessing import LabelEncoder, Normalizer
 
 from pathorob.robustness_index.robustness_index_utils import (
@@ -22,6 +23,11 @@ def select_optimal_k_value_pairs(dataset, model, patch_names, embeddings, meta, 
     if DBG:
         project_combis=project_combis[:2]
     all_stats = []
+
+    #construct patch ID that's unique across different project_combis, and turn ID into index
+    meta["combi_path_ID"] = [f"{combi}-{path}" for combi, path in zip(meta.project_combi.values, meta.path.values)]
+    meta["combi_path_index"] = pd.factorize(meta.combi_path_ID.values)[0]
+
     for c, project_combi in enumerate(project_combis):
         print(f"select_optimal_k_value_pairs: project_combi {c+1}/{len(project_combis)} {project_combi}", flush=True)
 

@@ -103,8 +103,8 @@ def compute_SO_SS_ratio(total_stats):
     SO = total_stats["fraction_SO-cum-norm"]
     SS = total_stats["fraction_SS-cum-norm"]
 
-    SO_SS_rati = SO / SS
-    return SO_SS_rati
+    SO_SS_ratio = SO / SS
+    return SO_SS_ratio
 
 
 def aggregate_stats(all_stats, compute_bootstrapped_robustness_index=True):
@@ -309,11 +309,11 @@ def calculate_fraction_same_class_per_k_value(df: pd.DataFrame, neighbor_index_m
     fractions["SO"] = {}
     fractions["OS"] = {}
     fractions["OO"] = {}
-    for row_index, patch_name in enumerate(df.patch_name.values):
-        fractions["SS"][patch_name] = SS[row_index,:]
-        fractions["SO"][patch_name] = SO[row_index,:]
-        fractions["OS"][patch_name] = OS[row_index,:]
-        fractions["OO"][patch_name] = OO[row_index,:]
+    for row_index, combi_path_index in enumerate(df.combi_path_index.values):
+        fractions["SS"][combi_path_index] = SS[row_index,:]
+        fractions["SO"][combi_path_index] = SO[row_index,:]
+        fractions["OS"][combi_path_index] = OS[row_index,:]
+        fractions["OO"][combi_path_index] = OO[row_index,:]
 
     result.update(fractions)
 
