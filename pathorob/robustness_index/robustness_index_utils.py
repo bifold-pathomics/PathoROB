@@ -103,14 +103,6 @@ def compute_ID_performance(total_stats):
     id_performance = SS / (SS + OS)
     return id_performance
 
-def compute_SO_SS_ratio(total_stats):
-    SO = total_stats["fraction_SO-cum-norm"]
-    SS = total_stats["fraction_SS-cum-norm"]
-
-    SO_SS_ratio = SO / SS
-    return SO_SS_ratio
-
-
 def aggregate_stats(all_stats, compute_bootstrapped_robustness_index=True):
     """
 
@@ -200,7 +192,6 @@ def aggregate_stats(all_stats, compute_bootstrapped_robustness_index=True):
     total_stats["generalization_index"] = compute_generalization_index(total_stats)
     total_stats["OOD_performance"] = compute_OOD_performance(total_stats)
     total_stats["ID_performance"] = compute_ID_performance(total_stats)
-    total_stats["SO_SS_ratio"] = compute_SO_SS_ratio(total_stats)
 
     #optionally use bootstrapping to get std dev estimate
     if compute_bootstrapped_robustness_index:
