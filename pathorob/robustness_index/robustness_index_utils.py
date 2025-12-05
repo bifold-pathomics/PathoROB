@@ -72,6 +72,10 @@ def get_cumulative_sum(mat):
     mat_cum_colsums = np.sum(mat_cum, axis=0)
     return mat_cum, mat_cum_colsums
 
+def compute_robustness_index(total_stats):
+    robustness_index = total_stats["fraction_SO-cum-norm"] / (total_stats["fraction_SO-cum-norm"] + total_stats["fraction_OS-cum-norm"])
+    return robustness_index
+
 def compute_generalization_index(total_stats):
     SS = total_stats["fraction_SS-cum-norm"]
     SO = total_stats["fraction_SO-cum-norm"]
@@ -192,7 +196,7 @@ def aggregate_stats(all_stats, compute_bootstrapped_robustness_index=True):
     total_stats["fraction_OS-cum-norm"] = nr_os_cum / total_cum
     total_stats["fraction_OO-cum-norm"] = nr_oo_cum / total_cum
 
-    total_stats["robustness_index"] = total_stats["fraction_SO-cum-norm"] / (total_stats["fraction_SO-cum-norm"] + total_stats["fraction_OS-cum-norm"])
+    total_stats["robustness_index"] = compute_robustness_index(total_stats)
     total_stats["generalization_index"] = compute_generalization_index(total_stats)
     total_stats["OOD_performance"] = compute_OOD_performance(total_stats)
     total_stats["ID_performance"] = compute_ID_performance(total_stats)
