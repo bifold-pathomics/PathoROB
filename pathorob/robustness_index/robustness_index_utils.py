@@ -309,11 +309,11 @@ def calculate_fraction_same_class_per_k_value(df: pd.DataFrame, neighbor_index_m
     fractions["SO"] = {}
     fractions["OS"] = {}
     fractions["OO"] = {}
-    for row_index, combi_path_index in enumerate(df.combi_path_index.values):
-        fractions["SS"][combi_path_index] = SS[row_index,:]
-        fractions["SO"][combi_path_index] = SO[row_index,:]
-        fractions["OS"][combi_path_index] = OS[row_index,:]
-        fractions["OO"][combi_path_index] = OO[row_index,:]
+    for row_index, patch_index in enumerate(df.patch_index.values):
+        fractions["SS"][patch_index] = SS[row_index,:]
+        fractions["SO"][patch_index] = SO[row_index,:]
+        fractions["OS"][patch_index] = OS[row_index,:]
+        fractions["OO"][patch_index] = OO[row_index,:]
 
     result.update(fractions)
 
@@ -402,20 +402,20 @@ def get_field_names_given_dataset(dataset):
     return "biological_class", "medical_center"
 
 
-def get_combi_meta_info(meta, patch_names, embeddings, combi):
+def get_combi_meta_info(meta, patch_indices, embeddings, combi):
     index_combi = np.where(meta.subset.values==combi)[0]
     meta_combi = meta.iloc[index_combi,:].reset_index(drop=True)
-    combi_patches = set(meta_combi.patch_name.values)
-    meta_combi.set_index("patch_name",inplace=True)
+    combi_patches = set(meta_combi.patch_index.values)
+    meta_combi.set_index("patch_index",inplace=True)
     meta_combi["embedding"] = [np.zeros(embeddings.shape[1]) for _ in range(len(meta_combi))]
-    sel = [p in combi_patches for p in patch_names]
+    sel = [p in combi_patches for p in patch_indices]
     if np.sum(sel) == 0:
         print(f'no patches for combi {combi}')
         return None
-    patch_names_sel = patch_names[sel]
+    patch_indices_sel = patch_indices[sel]
     embeddings_sel = embeddings[sel,:]
-    for k, patch_name in enumerate(patch_names_sel):
-        meta_combi.at[patch_name, 'embedding'] = embeddings_sel[k, :]
+    for k, patch_index in enumerate(patch_indices_sel):
+        meta_combi.at[patch_index, 'embedding'] = embeddings_sel[k, :]
     meta_combi.reset_index(inplace=True)
 
     embedding_sums = np.abs(np.vstack(meta_combi.embedding.values)).sum(axis=1)

@@ -197,9 +197,9 @@ def evaluate_model(
     embeddings = normalizer.fit_transform(embeddings)
     print(f"embeddings after normalize shape {embeddings.shape} max {np.max(embeddings)} min {np.min(embeddings)}")
 
-    patch_names = np.array(meta["patch_name"].values)
+    patch_indices = np.array(meta["patch_index"].values)
 
-    print(f"len meta {len(meta)} patch_names {len(patch_names)} emb {len(embeddings)}")
+    print(f"len meta {len(meta)} patch_indices {len(patch_indices)} emb {len(embeddings)}")
     print("len index before ",len(meta.index),"unique",len(np.unique(meta.index)))
 
     k_opt, bio_class_prediction_results, robustness_metrics_dict = select_optimal_k_value(
@@ -223,6 +223,17 @@ def calc_rob_index_model(paired_eval, data_manager, model, dataset, meta, result
     robustness_metrics_dict[model] = robustness_metrics
     return results, robustness_metrics_dict
 
+def construct_patch_index(data_manager, meta):
+    meta.insert(0, "patch_name", data_manager.compute_ids(meta))
+    if "subset" in meta.columns:
+        #construct patch ID that's unique across different project_combis, and turn ID into index
+        meta["combi_path_ID"] = [f"{combi}-{path}" for combi, path in zip(meta.subset.values, meta.patch_name.values)]
+        meta["patch_index"] = pd.factorize(meta.combi_path_ID.values)[0]
+        meta = meta.drop(columns=["combi_path_ID"])
+    else:
+        meta["patch_index"] = pd.factorize(meta.patch_name.values)[0]
+    meta = meta.drop(columns=["patch_name"])
+    return meta
 
 def get_meta(data_manager, dataset, paired_evaluation):
     if dataset == "tcga":
@@ -243,7 +254,8 @@ def get_meta(data_manager, dataset, paired_evaluation):
     else:
         raise ValueError(f"Unknown dataset: {dataset}")
     meta = data_manager.load_metadata(metadata_name)
-    meta.insert(0, "patch_name", data_manager.compute_ids(meta))
+    meta = construct_patch_index(data_manager, meta)
+
     # Exclude OOD data if present in the metadata frame
     meta = meta[~(meta["subset"] == "OOD")].reset_index(drop=True)
     return meta
