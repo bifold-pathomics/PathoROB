@@ -72,9 +72,34 @@ def get_cumulative_sum(mat):
     mat_cum_colsums = np.sum(mat_cum, axis=0)
     return mat_cum, mat_cum_colsums
 
+
+def compute_bio_vs_confounding(total_stats):
+    """
+    Compute the earlier version of the robustness index described in De Jong, et al. 2025:
+    Current Pathology Foundation Models are unrobust to Medical Center Differences
+    https://arxiv.org/abs/2501.18055
+    """
+    SS = total_stats["fraction_SS-cum-norm"]
+    OS = total_stats["fraction_OS-cum-norm"]
+    SO = total_stats["fraction_SO-cum-norm"]
+
+    bio_vs_confounding = (SS + SO) / (SS + OS)
+    return bio_vs_confounding
+
 def compute_robustness_index(total_stats):
-    robustness_index = total_stats["fraction_SO-cum-norm"] / (total_stats["fraction_SO-cum-norm"] + total_stats["fraction_OS-cum-norm"])
+    SO = total_stats["fraction_SO-cum-norm"]
+    OS = total_stats["fraction_OS-cum-norm"]
+
+    robustness_index = SO / (SO + OS)
     return robustness_index
+
+def compute_confounder_insensitivity(total_stats):
+    SS = total_stats["fraction_SS-cum-norm"]
+    SO = total_stats["fraction_SO-cum-norm"]
+    OS = total_stats["fraction_OS-cum-norm"]
+    OO = total_stats["fraction_OO-cum-norm"]
+    confounder_insensitivity = (SO + OO) / (SS + OS)
+    return confounder_insensitivity
 
 def compute_generalization_index(total_stats):
     SS = total_stats["fraction_SS-cum-norm"]
@@ -88,6 +113,18 @@ def compute_generalization_index(total_stats):
 
     generalization_index = (SSSO + SOOS) / (SSSO + SSOO)
     return generalization_index
+
+def compute_prediction_performance(total_stats):
+    """
+    Scalar metric of Out-Of_Distribution (OOD) performance: fraction of neighbors that have the same biological class, given that they have a different confounding class.
+    """
+    SS = total_stats["fraction_SS-cum-norm"]
+    OS = total_stats["fraction_OS-cum-norm"]
+    SO = total_stats["fraction_SO-cum-norm"]
+    OO = total_stats["fraction_OO-cum-norm"]
+
+    prediction_performance = (SS + SO) / (SS + SO + OS + OO)
+    return prediction_performance
 
 def compute_OOD_performance(total_stats):
     SO = total_stats["fraction_SO-cum-norm"]
@@ -188,10 +225,16 @@ def aggregate_stats(all_stats, compute_bootstrapped_robustness_index=True):
     total_stats["fraction_OS-cum-norm"] = nr_os_cum / total_cum
     total_stats["fraction_OO-cum-norm"] = nr_oo_cum / total_cum
 
+    #prediction metrics
+    total_stats["prediction_performance"] = compute_prediction_performance(total_stats)
+    total_stats["ID_performance"] = compute_ID_performance(total_stats)
+    total_stats["OOD_performance"] = compute_OOD_performance(total_stats)
+
+    #robustness metrics
+    total_stats["confounder_insensitivity"] = compute_confounder_insensitivity(total_stats)
+    total_stats["bio_vs_confounding"] = compute_bio_vs_confounding(total_stats)
     total_stats["robustness_index"] = compute_robustness_index(total_stats)
     total_stats["generalization_index"] = compute_generalization_index(total_stats)
-    total_stats["OOD_performance"] = compute_OOD_performance(total_stats)
-    total_stats["ID_performance"] = compute_ID_performance(total_stats)
 
     #optionally use bootstrapping to get std dev estimate
     if compute_bootstrapped_robustness_index:
