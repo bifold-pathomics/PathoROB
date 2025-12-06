@@ -642,7 +642,6 @@ def save_total_stats(stats, meta, dataset, model, results_folder, k_opt, bal_acc
     df_dict["ID_performance-k_opt"] = stats["ID_performance"][index_k_opt]
     df_dict["OOD_performance-k_opt"] = stats["OOD_performance"][index_k_opt]
     df_dict["generalization_index-k_opt"] = stats["generalization_index"][index_k_opt]
-    df_dict["SO_SS_ratio-k_opt"] = stats["SO_SS_ratio"][index_k_opt]
 
     if "robustness_index-mean" in stats and len(stats["robustness_index-mean"]) > index_k_opt:
         stats["robustness_index-mean-k_opt"] = stats["robustness_index-mean"][index_k_opt]
