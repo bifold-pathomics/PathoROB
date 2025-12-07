@@ -643,7 +643,7 @@ def get_split_criterion(dataset):
     if dataset == "camelyon":
         split_criterion = "slide_id" #no case ID available
     elif dataset == "tolkach_esca": #the function first groups by combination of biological and confounding class, then splits patches into groups based on patch sequence number.
-        split_criterion = "case_id"
+        split_criterion = "slide_id"
     elif "tcga" in dataset:
         split_criterion = "case_id"
     else:
