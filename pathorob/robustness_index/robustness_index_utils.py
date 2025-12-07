@@ -101,6 +101,21 @@ def compute_confounder_insensitivity(total_stats):
     confounder_insensitivity = (SO + OO) / (SS + OS)
     return confounder_insensitivity
 
+def compute_normalized_confounder_insensitivity(total_stats):
+    """
+    Frequency of other-center neighbors (SO and OO) divided by frequency of same-center neighbors (SS and OS), normalized.
+    """
+    SS = total_stats["fraction_SS-cum-norm"]
+    OS = total_stats["fraction_OS-cum-norm"]
+    SO = total_stats["fraction_SO-cum-norm"]
+    OO = total_stats["fraction_OO-cum-norm"]
+
+    tot_fraction_O = SO[-1] + OO[-1]
+    tot_fraction_S = SS[-1] + OS[-1]
+
+    normalized_robustness =  ((SO + OO) / tot_fraction_O) / ((SS + OS) / tot_fraction_S)
+    return normalized_robustness
+
 def compute_generalization_index(total_stats):
     SS = total_stats["fraction_SS-cum-norm"]
     SO = total_stats["fraction_SO-cum-norm"]
@@ -232,6 +247,7 @@ def aggregate_stats(all_stats, compute_bootstrapped_robustness_index=True):
 
     #robustness metrics
     total_stats["confounder_insensitivity"] = compute_confounder_insensitivity(total_stats)
+    total_stats["normalized_confounder_insensitivity"] = compute_normalized_confounder_insensitivity(total_stats)
     total_stats["bio_vs_confounding"] = compute_bio_vs_confounding(total_stats)
     total_stats["robustness_index"] = compute_robustness_index(total_stats)
     total_stats["generalization_index"] = compute_generalization_index(total_stats)
