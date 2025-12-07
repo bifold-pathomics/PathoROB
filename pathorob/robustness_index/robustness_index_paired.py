@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder, Normalizer
 
-from pathorob.robustness_index.robustness_index_utils import (
+from pathorob.robustness_index.robustness_index_utils import (compute_prediction_metrics,
     aggregate_stats, evaluate_embeddings, get_field_names_given_dataset, get_combi_meta_info, evaluate_knn_accuracy,
     get_k_values, save_balanced_accuracies, save_total_stats, plot_results_per_model,
     calculate_per_class_prediction_stats
@@ -36,11 +36,12 @@ def select_optimal_k_value_pairs(dataset, model, patch_indices, embeddings, meta
         if DBG and len(k_values) > 1:
             k_values = [k for k in k_values if k <= 51]  # limit k values for debugging
 
-        X_unscaled = np.vstack(meta_combi.embedding.values)
+        X_scaled = np.vstack(meta_combi.embedding.values)
         bio_values = meta_combi[biological_class_field].values
+        conf_values = meta_combi[confounding_class_field].values
 
-        X_train = X_unscaled
-        X_test = X_unscaled
+        X_train = X_scaled
+        X_test = X_scaled
 
         y_train = bio_values
         y_test = bio_values
@@ -73,6 +74,8 @@ def select_optimal_k_value_pairs(dataset, model, patch_indices, embeddings, meta
             aucs_per_class_list.append(aucs_per_class)
 
             stats = evaluate_embeddings(dataset, meta_combi, knn_indices)
+            compute_prediction_metrics(dataset, meta_combi, stats, X_scaled, bio_values, conf_values)
+
             all_stats.append(stats)
         else:
             print(f"skipping {project_combi} train_classes {train_classes} test_classes {test_classes}")
@@ -109,6 +112,17 @@ def evaluate_model_pairs(dataset, data_manager, model, meta, results_folder, fig
         opt_k=k_opt_param, plot_graphs=plot_graphs
     )
     print(f"found k_opt {k_opt}")
+    index_k_opt = list(robustness_metrics["k"]).index(k_opt)
+
+    selected_metrics = ["robustness_index", "bio_vs_confounding", "confounder_insensitivity", "normalized_confounder_insensitivity", "generalization_index", "prediction_performance", "confounder_log_reg_AUC"]
+    for metric in selected_metrics:
+        if metric in robustness_metrics:
+            if np.isscalar(robustness_metrics[metric]):
+                print(f"{model} {metric}: {robustness_metrics[metric]:.3f}")
+                bio_class_prediction_results[metric] = robustness_metrics[metric]
+            elif len(robustness_metrics[metric]) > index_k_opt:
+                print(f"{model} {metric}: {robustness_metrics[metric][index_k_opt]:.3f}")
+                bio_class_prediction_results[metric] = robustness_metrics[metric][index_k_opt]
 
     return bio_class_prediction_results, robustness_metrics
 

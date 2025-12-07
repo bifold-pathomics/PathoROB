@@ -10,6 +10,9 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from sklearn.metrics import roc_auc_score, balanced_accuracy_score
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import StratifiedGroupKFold
 from scipy.stats import mode
 
 
@@ -104,6 +107,7 @@ def compute_confounder_insensitivity(total_stats):
 def compute_normalized_confounder_insensitivity(total_stats):
     """
     Frequency of other-center neighbors (SO and OO) divided by frequency of same-center neighbors (SS and OS), normalized.
+    Note: the normalization assumes all neighbors are available, i.e. k_opt_param = -1.
     """
     SS = total_stats["fraction_SS-cum-norm"]
     OS = total_stats["fraction_OS-cum-norm"]
@@ -185,7 +189,7 @@ def aggregate_stats(all_stats, compute_bootstrapped_robustness_index=True):
         if key == "k":
             k_values = all_stats[0]["k"]
             total_stats["k"] = [int(k) for k in k_values if k <= max_k]  # restrict k values to max_k
-        elif key == "nr_samples":
+        elif key in ["nr_samples", "prediction_log_reg_AUC", "OOD_prediction_log_reg_AUC", "confounder_log_reg_AUC"]: #scalar metrics: average
             total_stats[key] = np.mean([stats[key] for stats in all_stats])
         elif key in ["SS", "SO", "OS", "OO"]:
             total_stats[key] = {}
@@ -634,6 +638,78 @@ def evaluate_embeddings(dataset, meta_sel, knn_indices):
                                                       )
 
     return stats
+
+def get_split_criterion(dataset):
+    if dataset == "camelyon":
+        split_criterion = "slide_id" #no case ID available
+    elif dataset == "tolkach_esca": #the function first groups by combination of biological and confounding class, then splits patches into groups based on patch sequence number.
+        split_criterion = "case_id"
+    elif "tcga" in dataset:
+        split_criterion = "case_id"
+    else:
+        raise ValueError(f"please implement split criterion for dataset {dataset}")
+    return split_criterion
+
+def compute_prediction_metrics(dataset, meta_combi, stats, X_unscaled, bio_values, conf_values,  n_splits = 5):
+    label_encoder = LabelEncoder()
+    y_bio = label_encoder.fit_transform(bio_values)
+    y_conf = label_encoder.fit_transform(conf_values)
+
+    split_criterion = get_split_criterion(dataset)
+    group_id = meta_combi[split_criterion].values
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X_unscaled)
+
+    stats["prediction_log_reg_AUC"] = compute_log_reg_AUC_cv(X_scaled, y_bio, group_id, n_splits=n_splits)
+    stats["confounder_log_reg_AUC"] = compute_log_reg_AUC_cv(X_scaled, y_conf, group_id, n_splits=n_splits)
+
+    #OOD prediction: use confounder values as groups for cross-validation
+    n_splits  = len(np.unique(conf_values))
+    print(f"dataset {dataset} OOD prediction: n_splits {n_splits}")
+    stats["OOD_prediction_log_reg_AUC"] = compute_log_reg_AUC_cv(X_scaled, y_bio, conf_values, n_splits=n_splits)
+
+    print(f"prediction_log_reg_AUC {stats['prediction_log_reg_AUC']}")
+    print(f"OOD_prediction_log_reg_AUC {stats['OOD_prediction_log_reg_AUC']}")
+    print(f"confounder_log_reg_AUC {stats['confounder_log_reg_AUC']}")
+
+def compute_log_reg_AUC(X_train, y_train, X_test, y_test):
+    if not len(np.unique(y_train)) == len(np.unique(y_test)):
+        raise ValueError("number of classes in train and test set must be the same for AUC computation")
+
+    clf = LogisticRegression(solver='lbfgs', max_iter=1000)
+    clf.fit(X_train, y_train)
+    y_probs = clf.predict_proba(X_test)
+
+    if len(np.unique(y_test)) == 2:
+        auc = roc_auc_score(y_test, y_probs[:, 1])
+    else:
+        auc = roc_auc_score(y_test, y_probs, multi_class='ovr')
+
+    return auc
+
+def compute_log_reg_AUC_cv(X, y, groups, n_splits=5):
+    skf = StratifiedGroupKFold(n_splits=n_splits, shuffle=True, random_state=42)
+    aucs = []
+    for train_index, test_index in skf.split(X, y, groups):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+
+        nr_train_classes = len(np.unique(y_train))
+        nr_test_classes = len(np.unique(y_test))
+        if nr_train_classes > 1 and  nr_test_classes > 1 and nr_train_classes == nr_test_classes:
+            try:
+                auc = compute_log_reg_AUC(X_train, y_train, X_test, y_test)
+            except:
+                print("exception in computing AUC; skipping fold.")
+                auc = np.nan
+            if auc < 0.5:
+                auc = 1.0 - auc
+            aucs.append(auc)
+        else:
+            print("Skipping fold due to insufficient class variety in train or test set.")
+    mean_auc = np.mean(aucs)
+    return mean_auc
 
 
 def convert_types_in_stats(stats):
