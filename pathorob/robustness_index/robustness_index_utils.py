@@ -90,6 +90,11 @@ def compute_bio_vs_confounding(total_stats):
     return bio_vs_confounding
 
 def compute_robustness_index(total_stats):
+    """
+    Compute the robustness index defined in Kömen et al. 2025:
+    Towards Robust Foundation Models for Digital Pathology
+    https://arxiv.org/abs/2507.17845
+    """
     SO = total_stats["fraction_SO-cum-norm"]
     OS = total_stats["fraction_OS-cum-norm"]
 
@@ -97,6 +102,11 @@ def compute_robustness_index(total_stats):
     return robustness_index
 
 def compute_confounder_insensitivity(total_stats):
+    """
+    Frequency of other-center neighbors (SO and OO) divided by frequency of same-center neighbors (SS and OS).
+    This measures: are the nearest neighbors of an evaluation sample equally likely to come from a different medical center as from the same one as that sample?
+    This is the inverse of the medical center prediction performance, which is reflected in the ratio (SS + OS) / (SO + OO).
+    """
     SS = total_stats["fraction_SS-cum-norm"]
     SO = total_stats["fraction_SO-cum-norm"]
     OS = total_stats["fraction_OS-cum-norm"]
@@ -146,6 +156,9 @@ def compute_prediction_performance(total_stats):
     return prediction_performance
 
 def compute_OOD_performance(total_stats):
+    """
+    Scalar metric of Out-Of_Distribution (OOD) performance: fraction of neighbors that have the same biological class, given that they have a different confounding class.
+    """
     SO = total_stats["fraction_SO-cum-norm"]
     OO = total_stats["fraction_OO-cum-norm"]
 
