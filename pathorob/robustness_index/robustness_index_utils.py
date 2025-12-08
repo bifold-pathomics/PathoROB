@@ -529,7 +529,7 @@ def filter_out_query_case_from_neighbors(meta, dataset, knn_indices, X_train, X_
 
 def evaluate_knn_accuracy(meta, dataset, X_train, X_test, y_train, y_test, n_neighbors, num_workers, knn_distances=None, knn_indices=None, do_checks=False):
     max_samples_per_group = int(np.max(meta["slide_id"].value_counts().values))
-    n_neighbors_with_margin = n_neighbors + max_samples_per_group #ensure sufficient neighbors will be left after removing neighbors from query case below
+    n_neighbors_with_margin = min(n_neighbors + max_samples_per_group, len(X_test)) #ensure sufficient neighbors will be left after removing neighbors from query case below
     knn_model = KNeighborsClassifier(
         n_neighbors=n_neighbors_with_margin, n_jobs=num_workers
     )
@@ -737,22 +737,33 @@ def convert_types_in_stats(stats):
             stats[k] = v
     return stats
 
+def add_selected_metrics(model, source_metrics, target_metrics, index_k_opt):
+    selected_scalar_metrics = ["robustness_index", "bio_vs_confounding", "confounder_insensitivity", "normalized_confounder_insensitivity", "generalization_index", "prediction_performance", "confounder_log_reg_AUC"]
+    for metric in selected_scalar_metrics:
+        if metric in source_metrics:
+            if np.isscalar(source_metrics[metric]):
+                print(f"{model} {metric}: {source_metrics[metric]:.3f}")
+                target_metrics[metric] = source_metrics[metric]
+            elif len(source_metrics[metric]) > index_k_opt:
+                print(f"{model} {metric}: {source_metrics[metric][index_k_opt]:.3f}")
+                target_metrics[metric] = source_metrics[metric][index_k_opt]
+
 
 def save_total_stats(stats, meta, dataset, model, results_folder, k_opt, bal_acc_at_k_opt):
     stats['k_opt'] = k_opt #store k_opt in stats
     stats['bal_acc_at_k_opt'] = bal_acc_at_k_opt #store max bal acc, obtained using k = k_opt
     index_k_opt = np.where(stats["k"] == k_opt)[0][0]  # index of k_opt in stats
-    df_dict = {"k_opt": k_opt, "bal_acc_at_k_opt": bal_acc_at_k_opt}
-    df_dict["robustness_index-k_opt"] = stats["robustness_index"][index_k_opt]
-    df_dict["ID_performance-k_opt"] = stats["ID_performance"][index_k_opt]
-    df_dict["OOD_performance-k_opt"] = stats["OOD_performance"][index_k_opt]
-    df_dict["generalization_index-k_opt"] = stats["generalization_index"][index_k_opt]
+    df_dict = {"k_opt": k_opt, "balanced_accuracy": bal_acc_at_k_opt}
+    df_dict["robustness_index"] = stats["robustness_index"][index_k_opt]
+    df_dict["ID_performance"] = stats["ID_performance"][index_k_opt]
+    df_dict["OOD_performance"] = stats["OOD_performance"][index_k_opt]
+    df_dict["generalization_index"] = stats["generalization_index"][index_k_opt]
 
     if "robustness_index-mean" in stats and len(stats["robustness_index-mean"]) > index_k_opt:
-        stats["robustness_index-mean-k_opt"] = stats["robustness_index-mean"][index_k_opt]
-        stats["robustness_index-std-k_opt"] = stats["robustness_index-mean"][index_k_opt]
-        df_dict["robustness_index-mean-k_opt"] = stats["robustness_index-mean-k_opt"]
-        df_dict["robustness_index-std-k_opt"] = stats["robustness_index-std-k_opt"]
+        stats["robustness_index-mean"] = stats["robustness_index-mean"][index_k_opt]
+        stats["robustness_index-std"] = stats["robustness_index-mean"][index_k_opt]
+        df_dict["robustness_index-mean"] = stats["robustness_index-mean"]
+        df_dict["robustness_index-std"] = stats["robustness_index-std"]
 
     biological_class_field, confounding_class_field = get_field_names_given_dataset(dataset)
     all_bio_classes = np.unique(meta[biological_class_field].values)
@@ -762,6 +773,8 @@ def save_total_stats(stats, meta, dataset, model, results_folder, k_opt, bal_acc
     with open(fn, 'wb') as f:
         pickle.dump({'stats': stats, 'all_bio_classes': all_bio_classes, 'all_conf_classes': all_conf_classes}, f)
     print(f'saved results to {fn}')
+
+    add_selected_metrics(model, stats, df_dict, index_k_opt)
 
     # Store summary file
     output_file = os.path.join(results_folder, OutputFiles.SUMMARY)

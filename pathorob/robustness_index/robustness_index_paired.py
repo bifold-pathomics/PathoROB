@@ -1,10 +1,9 @@
 import numpy as np
-import pandas as pd
 from sklearn.preprocessing import LabelEncoder, Normalizer
 
 from pathorob.robustness_index.robustness_index_utils import (compute_prediction_metrics,
     aggregate_stats, evaluate_embeddings, get_field_names_given_dataset, get_combi_meta_info, evaluate_knn_accuracy,
-    get_k_values, save_balanced_accuracies, save_total_stats, plot_results_per_model,
+    get_k_values, save_balanced_accuracies, save_total_stats, plot_results_per_model, add_selected_metrics,
     calculate_per_class_prediction_stats
 )
 
@@ -114,15 +113,7 @@ def evaluate_model_pairs(dataset, data_manager, model, meta, results_folder, fig
     print(f"found k_opt {k_opt}")
     index_k_opt = list(robustness_metrics["k"]).index(k_opt)
 
-    selected_metrics = ["robustness_index", "bio_vs_confounding", "confounder_insensitivity", "normalized_confounder_insensitivity", "generalization_index", "prediction_performance", "confounder_log_reg_AUC"]
-    for metric in selected_metrics:
-        if metric in robustness_metrics:
-            if np.isscalar(robustness_metrics[metric]):
-                print(f"{model} {metric}: {robustness_metrics[metric]:.3f}")
-                bio_class_prediction_results[metric] = robustness_metrics[metric]
-            elif len(robustness_metrics[metric]) > index_k_opt:
-                print(f"{model} {metric}: {robustness_metrics[metric][index_k_opt]:.3f}")
-                bio_class_prediction_results[metric] = robustness_metrics[metric][index_k_opt]
+    add_selected_metrics(model, robustness_metrics, bio_class_prediction_results, index_k_opt)
 
     return bio_class_prediction_results, robustness_metrics
 
