@@ -10,6 +10,9 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from sklearn.metrics import roc_auc_score, balanced_accuracy_score
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import StratifiedGroupKFold
 from scipy.stats import mode
 
 
@@ -72,6 +75,61 @@ def get_cumulative_sum(mat):
     mat_cum_colsums = np.sum(mat_cum, axis=0)
     return mat_cum, mat_cum_colsums
 
+
+def compute_bio_vs_confounding(total_stats):
+    """
+    Compute the earlier version of the robustness index described in De Jong, et al. 2025:
+    Current Pathology Foundation Models are unrobust to Medical Center Differences
+    https://arxiv.org/abs/2501.18055
+    """
+    SS = total_stats["fraction_SS-cum-norm"]
+    OS = total_stats["fraction_OS-cum-norm"]
+    SO = total_stats["fraction_SO-cum-norm"]
+
+    bio_vs_confounding = (SS + SO) / (SS + OS)
+    return bio_vs_confounding
+
+def compute_robustness_index(total_stats):
+    """
+    Compute the robustness index defined in Kömen et al. 2025:
+    Towards Robust Foundation Models for Digital Pathology
+    https://arxiv.org/abs/2507.17845
+    """
+    SO = total_stats["fraction_SO-cum-norm"]
+    OS = total_stats["fraction_OS-cum-norm"]
+
+    robustness_index = SO / (SO + OS)
+    return robustness_index
+
+def compute_confounder_insensitivity(total_stats):
+    """
+    Frequency of other-center neighbors (SO and OO) divided by frequency of same-center neighbors (SS and OS).
+    This measures: are the nearest neighbors of an evaluation sample equally likely to come from a different medical center as from the same one as that sample?
+    This is the inverse of the medical center prediction performance, which is reflected in the ratio (SS + OS) / (SO + OO).
+    """
+    SS = total_stats["fraction_SS-cum-norm"]
+    SO = total_stats["fraction_SO-cum-norm"]
+    OS = total_stats["fraction_OS-cum-norm"]
+    OO = total_stats["fraction_OO-cum-norm"]
+    confounder_insensitivity = (SO + OO) / (SS + OS)
+    return confounder_insensitivity
+
+def compute_normalized_confounder_insensitivity(total_stats):
+    """
+    Frequency of other-center neighbors (SO and OO) divided by frequency of same-center neighbors (SS and OS), normalized.
+    Note: the normalization assumes all neighbors are available, i.e. k_opt_param = -1.
+    """
+    SS = total_stats["fraction_SS-cum-norm"]
+    OS = total_stats["fraction_OS-cum-norm"]
+    SO = total_stats["fraction_SO-cum-norm"]
+    OO = total_stats["fraction_OO-cum-norm"]
+
+    tot_fraction_O = SO[-1] + OO[-1]
+    tot_fraction_S = SS[-1] + OS[-1]
+
+    normalized_robustness =  ((SO + OO) / tot_fraction_O) / ((SS + OS) / tot_fraction_S)
+    return normalized_robustness
+
 def compute_generalization_index(total_stats):
     SS = total_stats["fraction_SS-cum-norm"]
     SO = total_stats["fraction_SO-cum-norm"]
@@ -85,7 +143,22 @@ def compute_generalization_index(total_stats):
     generalization_index = (SSSO + SOOS) / (SSSO + SSOO)
     return generalization_index
 
+def compute_prediction_performance(total_stats):
+    """
+    Scalar metric of Out-Of_Distribution (OOD) performance: fraction of neighbors that have the same biological class, given that they have a different confounding class.
+    """
+    SS = total_stats["fraction_SS-cum-norm"]
+    OS = total_stats["fraction_OS-cum-norm"]
+    SO = total_stats["fraction_SO-cum-norm"]
+    OO = total_stats["fraction_OO-cum-norm"]
+
+    prediction_performance = (SS + SO) / (SS + SO + OS + OO)
+    return prediction_performance
+
 def compute_OOD_performance(total_stats):
+    """
+    Scalar metric of Out-Of_Distribution (OOD) performance: fraction of neighbors that have the same biological class, given that they have a different confounding class.
+    """
     SO = total_stats["fraction_SO-cum-norm"]
     OO = total_stats["fraction_OO-cum-norm"]
 
@@ -98,14 +171,6 @@ def compute_ID_performance(total_stats):
 
     id_performance = SS / (SS + OS)
     return id_performance
-
-def compute_SO_SS_ratio(total_stats):
-    SO = total_stats["fraction_SO-cum-norm"]
-    SS = total_stats["fraction_SS-cum-norm"]
-
-    SO_SS_rati = SO / SS
-    return SO_SS_rati
-
 
 def aggregate_stats(all_stats, compute_bootstrapped_robustness_index=True):
     """
@@ -137,7 +202,7 @@ def aggregate_stats(all_stats, compute_bootstrapped_robustness_index=True):
         if key == "k":
             k_values = all_stats[0]["k"]
             total_stats["k"] = [int(k) for k in k_values if k <= max_k]  # restrict k values to max_k
-        elif key == "nr_samples":
+        elif key in ["nr_samples", "prediction_log_reg_AUC", "OOD_prediction_log_reg_AUC", "confounder_log_reg_AUC"]: #scalar metrics: average
             total_stats[key] = np.mean([stats[key] for stats in all_stats])
         elif key in ["SS", "SO", "OS", "OO"]:
             total_stats[key] = {}
@@ -192,11 +257,17 @@ def aggregate_stats(all_stats, compute_bootstrapped_robustness_index=True):
     total_stats["fraction_OS-cum-norm"] = nr_os_cum / total_cum
     total_stats["fraction_OO-cum-norm"] = nr_oo_cum / total_cum
 
-    total_stats["robustness_index"] = total_stats["fraction_SO-cum-norm"] / (total_stats["fraction_SO-cum-norm"] + total_stats["fraction_OS-cum-norm"])
-    total_stats["generalization_index"] = compute_generalization_index(total_stats)
-    total_stats["OOD_performance"] = compute_OOD_performance(total_stats)
+    #prediction metrics
+    total_stats["prediction_performance"] = compute_prediction_performance(total_stats)
     total_stats["ID_performance"] = compute_ID_performance(total_stats)
-    total_stats["SO_SS_ratio"] = compute_SO_SS_ratio(total_stats)
+    total_stats["OOD_performance"] = compute_OOD_performance(total_stats)
+
+    #robustness metrics
+    total_stats["confounder_insensitivity"] = compute_confounder_insensitivity(total_stats)
+    total_stats["normalized_confounder_insensitivity"] = compute_normalized_confounder_insensitivity(total_stats)
+    total_stats["bio_vs_confounding"] = compute_bio_vs_confounding(total_stats)
+    total_stats["robustness_index"] = compute_robustness_index(total_stats)
+    total_stats["generalization_index"] = compute_generalization_index(total_stats)
 
     #optionally use bootstrapping to get std dev estimate
     if compute_bootstrapped_robustness_index:
@@ -309,11 +380,11 @@ def calculate_fraction_same_class_per_k_value(df: pd.DataFrame, neighbor_index_m
     fractions["SO"] = {}
     fractions["OS"] = {}
     fractions["OO"] = {}
-    for row_index, patch_name in enumerate(df.patch_name.values):
-        fractions["SS"][patch_name] = SS[row_index,:]
-        fractions["SO"][patch_name] = SO[row_index,:]
-        fractions["OS"][patch_name] = OS[row_index,:]
-        fractions["OO"][patch_name] = OO[row_index,:]
+    for row_index, patch_index in enumerate(df.patch_index.values):
+        fractions["SS"][patch_index] = SS[row_index,:]
+        fractions["SO"][patch_index] = SO[row_index,:]
+        fractions["OS"][patch_index] = OS[row_index,:]
+        fractions["OO"][patch_index] = OO[row_index,:]
 
     result.update(fractions)
 
@@ -402,20 +473,20 @@ def get_field_names_given_dataset(dataset):
     return "biological_class", "medical_center"
 
 
-def get_combi_meta_info(meta, patch_names, embeddings, combi):
+def get_combi_meta_info(meta, patch_indices, embeddings, combi):
     index_combi = np.where(meta.subset.values==combi)[0]
     meta_combi = meta.iloc[index_combi,:].reset_index(drop=True)
-    combi_patches = set(meta_combi.patch_name.values)
-    meta_combi.set_index("patch_name",inplace=True)
+    combi_patches = set(meta_combi.patch_index.values)
+    meta_combi.set_index("patch_index",inplace=True)
     meta_combi["embedding"] = [np.zeros(embeddings.shape[1]) for _ in range(len(meta_combi))]
-    sel = [p in combi_patches for p in patch_names]
+    sel = [p in combi_patches for p in patch_indices]
     if np.sum(sel) == 0:
         print(f'no patches for combi {combi}')
         return None
-    patch_names_sel = patch_names[sel]
+    patch_indices_sel = patch_indices[sel]
     embeddings_sel = embeddings[sel,:]
-    for k, patch_name in enumerate(patch_names_sel):
-        meta_combi.at[patch_name, 'embedding'] = embeddings_sel[k, :]
+    for k, patch_index in enumerate(patch_indices_sel):
+        meta_combi.at[patch_index, 'embedding'] = embeddings_sel[k, :]
     meta_combi.reset_index(inplace=True)
 
     embedding_sums = np.abs(np.vstack(meta_combi.embedding.values)).sum(axis=1)
@@ -458,7 +529,7 @@ def filter_out_query_case_from_neighbors(meta, dataset, knn_indices, X_train, X_
 
 def evaluate_knn_accuracy(meta, dataset, X_train, X_test, y_train, y_test, n_neighbors, num_workers, knn_distances=None, knn_indices=None, do_checks=False):
     max_samples_per_group = int(np.max(meta["slide_id"].value_counts().values))
-    n_neighbors_with_margin = n_neighbors + max_samples_per_group #ensure sufficient neighbors will be left after removing neighbors from query case below
+    n_neighbors_with_margin = min(n_neighbors + max_samples_per_group, len(X_test)) #ensure sufficient neighbors will be left after removing neighbors from query case below
     knn_model = KNeighborsClassifier(
         n_neighbors=n_neighbors_with_margin, n_jobs=num_workers
     )
@@ -581,6 +652,78 @@ def evaluate_embeddings(dataset, meta_sel, knn_indices):
 
     return stats
 
+def get_split_criterion(dataset):
+    if dataset == "camelyon":
+        split_criterion = "slide_id" #no case ID available
+    elif dataset == "tolkach_esca": #the function first groups by combination of biological and confounding class, then splits patches into groups based on patch sequence number.
+        split_criterion = "slide_id"
+    elif "tcga" in dataset:
+        split_criterion = "case_id"
+    else:
+        raise ValueError(f"please implement split criterion for dataset {dataset}")
+    return split_criterion
+
+def compute_prediction_metrics(dataset, meta_combi, stats, X_unscaled, bio_values, conf_values,  n_splits = 5):
+    label_encoder = LabelEncoder()
+    y_bio = label_encoder.fit_transform(bio_values)
+    y_conf = label_encoder.fit_transform(conf_values)
+
+    split_criterion = get_split_criterion(dataset)
+    group_id = meta_combi[split_criterion].values
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X_unscaled)
+
+    stats["prediction_log_reg_AUC"] = compute_log_reg_AUC_cv(X_scaled, y_bio, group_id, n_splits=n_splits)
+    stats["confounder_log_reg_AUC"] = compute_log_reg_AUC_cv(X_scaled, y_conf, group_id, n_splits=n_splits)
+
+    #OOD prediction: use confounder values as groups for cross-validation
+    n_splits  = len(np.unique(conf_values))
+    print(f"dataset {dataset} OOD prediction: n_splits {n_splits}")
+    stats["OOD_prediction_log_reg_AUC"] = compute_log_reg_AUC_cv(X_scaled, y_bio, conf_values, n_splits=n_splits)
+
+    print(f"prediction_log_reg_AUC {stats['prediction_log_reg_AUC']}")
+    print(f"OOD_prediction_log_reg_AUC {stats['OOD_prediction_log_reg_AUC']}")
+    print(f"confounder_log_reg_AUC {stats['confounder_log_reg_AUC']}")
+
+def compute_log_reg_AUC(X_train, y_train, X_test, y_test):
+    if not len(np.unique(y_train)) == len(np.unique(y_test)):
+        raise ValueError("number of classes in train and test set must be the same for AUC computation")
+
+    clf = LogisticRegression(solver='lbfgs', max_iter=1000)
+    clf.fit(X_train, y_train)
+    y_probs = clf.predict_proba(X_test)
+
+    if len(np.unique(y_test)) == 2:
+        auc = roc_auc_score(y_test, y_probs[:, 1])
+    else:
+        auc = roc_auc_score(y_test, y_probs, multi_class='ovr')
+
+    return auc
+
+def compute_log_reg_AUC_cv(X, y, groups, n_splits=5):
+    skf = StratifiedGroupKFold(n_splits=n_splits, shuffle=True, random_state=42)
+    aucs = []
+    for train_index, test_index in skf.split(X, y, groups):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+
+        nr_train_classes = len(np.unique(y_train))
+        nr_test_classes = len(np.unique(y_test))
+        if nr_train_classes > 1 and  nr_test_classes > 1 and nr_train_classes == nr_test_classes:
+            try:
+                auc = compute_log_reg_AUC(X_train, y_train, X_test, y_test)
+            except:
+                print("exception in computing AUC; skipping fold.")
+                auc = np.nan
+            if auc < 0.5:
+                auc = 1.0 - auc
+            aucs.append(auc)
+        else:
+            print("Skipping fold due to insufficient class variety in train or test set.")
+    mean_auc = np.mean(aucs)
+    return mean_auc
+
 
 def convert_types_in_stats(stats):
     for k, v in stats.items():
@@ -594,23 +737,33 @@ def convert_types_in_stats(stats):
             stats[k] = v
     return stats
 
+def add_selected_metrics(model, source_metrics, target_metrics, index_k_opt):
+    selected_scalar_metrics = ["robustness_index", "bio_vs_confounding", "confounder_insensitivity", "normalized_confounder_insensitivity", "generalization_index", "prediction_performance", "confounder_log_reg_AUC"]
+    for metric in selected_scalar_metrics:
+        if metric in source_metrics:
+            if np.isscalar(source_metrics[metric]):
+                print(f"{model} {metric}: {source_metrics[metric]:.3f}")
+                target_metrics[metric] = source_metrics[metric]
+            elif len(source_metrics[metric]) > index_k_opt:
+                print(f"{model} {metric}: {source_metrics[metric][index_k_opt]:.3f}")
+                target_metrics[metric] = source_metrics[metric][index_k_opt]
+
 
 def save_total_stats(stats, meta, dataset, model, results_folder, k_opt, bal_acc_at_k_opt):
     stats['k_opt'] = k_opt #store k_opt in stats
     stats['bal_acc_at_k_opt'] = bal_acc_at_k_opt #store max bal acc, obtained using k = k_opt
     index_k_opt = np.where(stats["k"] == k_opt)[0][0]  # index of k_opt in stats
-    df_dict = {"k_opt": k_opt, "bal_acc_at_k_opt": bal_acc_at_k_opt}
-    df_dict["robustness_index-k_opt"] = stats["robustness_index"][index_k_opt]
-    df_dict["ID_performance-k_opt"] = stats["ID_performance"][index_k_opt]
-    df_dict["OOD_performance-k_opt"] = stats["OOD_performance"][index_k_opt]
-    df_dict["generalization_index-k_opt"] = stats["generalization_index"][index_k_opt]
-    df_dict["SO_SS_ratio-k_opt"] = stats["SO_SS_ratio"][index_k_opt]
+    df_dict = {"k_opt": k_opt, "balanced_accuracy": bal_acc_at_k_opt}
+    df_dict["robustness_index"] = stats["robustness_index"][index_k_opt]
+    df_dict["ID_performance"] = stats["ID_performance"][index_k_opt]
+    df_dict["OOD_performance"] = stats["OOD_performance"][index_k_opt]
+    df_dict["generalization_index"] = stats["generalization_index"][index_k_opt]
 
     if "robustness_index-mean" in stats and len(stats["robustness_index-mean"]) > index_k_opt:
-        stats["robustness_index-mean-k_opt"] = stats["robustness_index-mean"][index_k_opt]
-        stats["robustness_index-std-k_opt"] = stats["robustness_index-mean"][index_k_opt]
-        df_dict["robustness_index-mean-k_opt"] = stats["robustness_index-mean-k_opt"]
-        df_dict["robustness_index-std-k_opt"] = stats["robustness_index-std-k_opt"]
+        stats["robustness_index-mean"] = stats["robustness_index-mean"][index_k_opt]
+        stats["robustness_index-std"] = stats["robustness_index-mean"][index_k_opt]
+        df_dict["robustness_index-mean"] = stats["robustness_index-mean"]
+        df_dict["robustness_index-std"] = stats["robustness_index-std"]
 
     biological_class_field, confounding_class_field = get_field_names_given_dataset(dataset)
     all_bio_classes = np.unique(meta[biological_class_field].values)
@@ -620,6 +773,8 @@ def save_total_stats(stats, meta, dataset, model, results_folder, k_opt, bal_acc
     with open(fn, 'wb') as f:
         pickle.dump({'stats': stats, 'all_bio_classes': all_bio_classes, 'all_conf_classes': all_conf_classes}, f)
     print(f'saved results to {fn}')
+
+    add_selected_metrics(model, stats, df_dict, index_k_opt)
 
     # Store summary file
     output_file = os.path.join(results_folder, OutputFiles.SUMMARY)

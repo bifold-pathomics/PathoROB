@@ -12,7 +12,7 @@ import pathorob.robustness_index.robustness_graphs as robustness_graphs
 from pathorob.robustness_index.robustness_index_paired import evaluate_model_pairs
 from pathorob.robustness_index.robustness_index_utils import (
     aggregate_stats, save_total_stats, get_field_names_given_dataset, evaluate_knn_accuracy,
-    get_k_values,
+    get_k_values, compute_prediction_metrics,
     save_balanced_accuracies, evaluate_embeddings, calculate_per_class_prediction_stats,
     get_model_colors, get_folder_paths, plot_results_per_model,
     OutputFiles, get_model_names, get_generic_folder_paths, get_file_path
@@ -91,6 +91,7 @@ def select_optimal_k_value(dataset, model, embeddings, meta, results_folder, fig
     k_values = get_k_values(dataset, False, opt_k)
 
     bio_values = meta[biological_class_field].values
+    conf_values = meta[confounding_class_field].values
     bio_classes = np.unique(bio_values)
     print(f"dataset {dataset} nr bio_classes {len(bio_classes)}", flush=True)
 
@@ -169,6 +170,7 @@ def select_optimal_k_value(dataset, model, embeddings, meta, results_folder, fig
     t_rep_end = time.time()
     print(f"dt {t_rep_end - t_rep_start:.2f} sec", flush=True)
     stats_rep = evaluate_embeddings(dataset, meta, knn_indices)
+    compute_prediction_metrics(dataset, meta, stats_rep, X_scaled, bio_values, conf_values)
     all_stats.append(stats_rep)
 
     total_stats = aggregate_stats(all_stats, compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index)
@@ -197,9 +199,9 @@ def evaluate_model(
     embeddings = normalizer.fit_transform(embeddings)
     print(f"embeddings after normalize shape {embeddings.shape} max {np.max(embeddings)} min {np.min(embeddings)}")
 
-    patch_names = np.array(meta["patch_name"].values)
+    patch_indices = np.array(meta["patch_index"].values)
 
-    print(f"len meta {len(meta)} patch_names {len(patch_names)} emb {len(embeddings)}")
+    print(f"len meta {len(meta)} patch_indices {len(patch_indices)} emb {len(embeddings)}")
     print("len index before ",len(meta.index),"unique",len(np.unique(meta.index)))
 
     k_opt, bio_class_prediction_results, robustness_metrics_dict = select_optimal_k_value(
@@ -223,6 +225,17 @@ def calc_rob_index_model(paired_eval, data_manager, model, dataset, meta, result
     robustness_metrics_dict[model] = robustness_metrics
     return results, robustness_metrics_dict
 
+def construct_patch_index(data_manager, meta):
+    meta.insert(0, "patch_name", data_manager.compute_ids(meta))
+    if "subset" in meta.columns:
+        #construct patch ID that's unique across different project_combis, and turn ID into index
+        meta["combi_path_ID"] = [f"{combi}-{path}" for combi, path in zip(meta.subset.values, meta.patch_name.values)]
+        meta["patch_index"] = pd.factorize(meta.combi_path_ID.values)[0]
+        meta = meta.drop(columns=["combi_path_ID"])
+    else:
+        meta["patch_index"] = pd.factorize(meta.patch_name.values)[0]
+    meta = meta.drop(columns=["patch_name"])
+    return meta
 
 def get_meta(data_manager, dataset, paired_evaluation):
     if dataset == "tcga":
@@ -243,7 +256,10 @@ def get_meta(data_manager, dataset, paired_evaluation):
     else:
         raise ValueError(f"Unknown dataset: {dataset}")
     meta = data_manager.load_metadata(metadata_name)
-    meta.insert(0, "patch_name", data_manager.compute_ids(meta))
+
+    meta = construct_patch_index(data_manager, meta)
+    if dataset == "tcga":
+        meta["case_id"] = [slide_id[:12] for slide_id in meta["slide_id"].values]
     # Exclude OOD data if present in the metadata frame
     meta = meta[~(meta["subset"] == "OOD")].reset_index(drop=True)
     return meta

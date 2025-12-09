@@ -1,14 +1,14 @@
 import numpy as np
 from sklearn.preprocessing import LabelEncoder, Normalizer
 
-from pathorob.robustness_index.robustness_index_utils import (
+from pathorob.robustness_index.robustness_index_utils import (compute_prediction_metrics,
     aggregate_stats, evaluate_embeddings, get_field_names_given_dataset, get_combi_meta_info, evaluate_knn_accuracy,
-    get_k_values, save_balanced_accuracies, save_total_stats, plot_results_per_model,
+    get_k_values, save_balanced_accuracies, save_total_stats, plot_results_per_model, add_selected_metrics,
     calculate_per_class_prediction_stats
 )
 
 
-def select_optimal_k_value_pairs(dataset, model, patch_names, embeddings, meta, results_folder, fig_folder, num_workers=8, DBG=False, compute_bootstrapped_robustness_index=False, opt_k=0, plot_graphs=True):
+def select_optimal_k_value_pairs(dataset, model, patch_indices, embeddings, meta, results_folder, fig_folder, num_workers=8, DBG=False, compute_bootstrapped_robustness_index=False, opt_k=0, plot_graphs=True):
     project_combis = np.unique(meta.subset.values)
     print(f"nr project_combis {len(project_combis)}")
     biological_class_field, confounding_class_field = get_field_names_given_dataset(dataset)
@@ -22,10 +22,11 @@ def select_optimal_k_value_pairs(dataset, model, patch_names, embeddings, meta, 
     if DBG:
         project_combis=project_combis[:2]
     all_stats = []
+
     for c, project_combi in enumerate(project_combis):
         print(f"select_optimal_k_value_pairs: project_combi {c+1}/{len(project_combis)} {project_combi}", flush=True)
 
-        meta_combi = get_combi_meta_info(meta, patch_names, embeddings, project_combi)
+        meta_combi = get_combi_meta_info(meta, patch_indices, embeddings, project_combi)
         if meta_combi is None:
             print(f'no patches found for project_combi {project_combi}; continuing')
             continue
@@ -34,11 +35,12 @@ def select_optimal_k_value_pairs(dataset, model, patch_names, embeddings, meta, 
         if DBG and len(k_values) > 1:
             k_values = [k for k in k_values if k <= 51]  # limit k values for debugging
 
-        X_unscaled = np.vstack(meta_combi.embedding.values)
+        X_scaled = np.vstack(meta_combi.embedding.values)
         bio_values = meta_combi[biological_class_field].values
+        conf_values = meta_combi[confounding_class_field].values
 
-        X_train = X_unscaled
-        X_test = X_unscaled
+        X_train = X_scaled
+        X_test = X_scaled
 
         y_train = bio_values
         y_test = bio_values
@@ -71,6 +73,8 @@ def select_optimal_k_value_pairs(dataset, model, patch_names, embeddings, meta, 
             aucs_per_class_list.append(aucs_per_class)
 
             stats = evaluate_embeddings(dataset, meta_combi, knn_indices)
+            compute_prediction_metrics(dataset, meta_combi, stats, X_scaled, bio_values, conf_values)
+
             all_stats.append(stats)
         else:
             print(f"skipping {project_combi} train_classes {train_classes} test_classes {test_classes}")
@@ -96,17 +100,20 @@ def evaluate_model_pairs(dataset, data_manager, model, meta, results_folder, fig
     embeddings = normalizer.fit_transform(embeddings)
     print(f"embeddings after normalize shape {embeddings.shape} max {np.max(embeddings)} min {np.min(embeddings)}")
 
-    patch_names = np.array(meta["patch_name"].values)
+    patch_indices = np.array(meta["patch_index"].values)
 
-    print(f"len meta {len(meta)} patch_names {len(patch_names)} emb {len(embeddings)}")
+    print(f"len meta {len(meta)} patch_indices {len(patch_indices)} emb {len(embeddings)}")
     print("len index before ", len(meta.index), "unique", len(np.unique(meta.index)))
 
     k_opt, bio_class_prediction_results, robustness_metrics = select_optimal_k_value_pairs(
-        dataset, model, patch_names, embeddings, meta, results_folder, fig_folder,
+        dataset, model, patch_indices, embeddings, meta, results_folder, fig_folder,
         num_workers=num_workers, DBG=DBG, compute_bootstrapped_robustness_index=compute_bootstrapped_robustness_index,
         opt_k=k_opt_param, plot_graphs=plot_graphs
     )
     print(f"found k_opt {k_opt}")
+    index_k_opt = list(robustness_metrics["k"]).index(k_opt)
+
+    add_selected_metrics(model, robustness_metrics, bio_class_prediction_results, index_k_opt)
 
     return bio_class_prediction_results, robustness_metrics
 
