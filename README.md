@@ -90,7 +90,7 @@ python3 -m pathorob.robustness_index.robustness_index --model uni2h_clsmean
   - `{model}/{dataset}/{max_patches_per_combi}_{k_opt_param}/frequency-same-class.pkl`:
     - Raw results for computing the robustness index.
 - Further arguments: `pathorob/robustness_index/robustness_index.py`
-  - Notice: per default, we use the optimal `k` values per dataset as determined in our [preprint](https://arxiv.org/abs/2507.17845).
+  - Notice: per default, we use the `k` values per dataset as determined in our [preprint](https://arxiv.org/abs/2507.17845).
 
 After computing the robustness index for multiple models, you can create further visualizations to compare them:
 
