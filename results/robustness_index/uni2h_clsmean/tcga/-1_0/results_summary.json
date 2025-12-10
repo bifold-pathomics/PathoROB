@@ -1,13 +1,13 @@
 {
     "k_opt": 61,
-    "balanced_accuracy": 0.9427216312056739,
-    "robustness_index": 0.7956991681900742,
-    "ID_performance": 0.9098436755626464,
-    "OOD_performance": 0.9363548389847126,
-    "generalization_index": 1.029138152117914,
-    "bio_vs_confounding": 1.260979359770817,
-    "confounder_insensitivity": 0.37500279764550154,
+    "balanced_accuracy": 0.9422340425531915,
+    "robustness_index": 0.8029316621093975,
+    "ID_performance": 0.9092892005651058,
+    "OOD_performance": 0.9345239743554241,
+    "generalization_index": 1.0277521978427056,
+    "bio_vs_confounding": 1.2788796367617312,
+    "confounder_insensitivity": 0.3954852377666882,
     "normalized_confounder_insensitivity": 1.0,
-    "prediction_performance": 0.9170740320892918,
-    "confounder_log_reg_AUC": 0.9743698286052009
+    "prediction_performance": 0.9164408208347867,
+    "confounder_log_reg_AUC": 0.9613857860520094
 }

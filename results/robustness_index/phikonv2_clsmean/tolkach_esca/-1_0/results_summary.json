@@ -1,9 +1,13 @@
 {
     "k_opt": 46,
-    "bal_acc_at_k_opt": 0.9587777777777778,
-    "robustness_index-k_opt": 0.7681137397547795,
-    "ID_performance-k_opt": 0.9256346607781923,
-    "OOD_performance-k_opt": 0.9439976655967318,
-    "generalization_index-k_opt": 1.0198382856613228,
-    "SO_SS_ratio-k_opt": 0.26612242480479353
+    "balanced_accuracy": 0.9587777777777778,
+    "robustness_index": 0.7681137397547795,
+    "ID_performance": 0.9256346607781923,
+    "OOD_performance": 0.9439976655967318,
+    "generalization_index": 1.0198382856613228,
+    "bio_vs_confounding": 1.1719668011878475,
+    "confounder_insensitivity": 0.2609457092819615,
+    "normalized_confounder_insensitivity": 0.3838572924077168,
+    "prediction_performance": 0.9294347826086957,
+    "confounder_log_reg_AUC": 0.9980783288655475
 }
