@@ -62,11 +62,11 @@ def extend_metadata(all_metadata, new_metadata):
     return all_metadata
 
 
-def extract_features(model_wrapper, data_manager, model_name, dataset_name, batch_size, num_workers, device):
+def extract_features(model_wrapper, data_manager, model_name, dataset_name, dataset_path, batch_size, num_workers, device):
 
     # Prepare data loader
     print(f"Loading 'PathoROB-{dataset_name}' dataset...")
-    dataset = load_dataset(f"bifold-pathomics/PathoROB-{dataset_name}", split="train")
+    dataset = load_dataset(dataset_path, split="train")
     dataset.set_transform(lambda x: preprocess_fn(x, model_wrapper.get_preprocess()))
     data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False)
 
@@ -129,6 +129,7 @@ def compute(
             data_manager=data_manager,
             model_name=model,
             dataset_name=dataset_name,
+            dataset_path=f"bifold-pathomics/PathoROB-{dataset_name}",
             batch_size=batch_size,
             num_workers=num_workers,
             device=device,
