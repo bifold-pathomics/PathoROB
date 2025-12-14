@@ -7,10 +7,9 @@
 ![PathoROB pipeline](docs/pathorob_pipeline.png)
 
 PathoROB contains **four datasets** covering 28 biological classes from 34 medical centers and **three metrics**:
-1. **Robustness Index**: Measures the ability of an FM to capture biological features while ignoring
-non-biological features.
-2. **Average Performance Drop (APD)**: Measures the impact of non-biological features on the generalization performance of downstream models.
-3. **Clustering Score**: Measures the effect of non-biological features on the quality of k-means clusters.
+1. **Robustness Index**: Measures the dominance of biological over non-biological features in an FM representation space.
+2. **Average Performance Drop (APD)**: Measures the robustness of downstream models to shortcut learning of non-biological features and the effect on generalization performance.
+3. **Clustering Score**: Measures the robustness of clustering to non-biological features and the impact on the quality of k-means clusters.
 
 ![PathoROB overview](docs/pathorob_overview.png)
 
@@ -100,7 +99,7 @@ python3 -m pathorob.robustness_index.robustness_index --mode compare
 ```
 
 - Results: `results/robustness_index/fig`
-  - TODO
+
 
 #### (2) Average Performance Drop (APD)
 
@@ -184,7 +183,8 @@ class MyModelWrapper(ModelWrapper):
 
 ## Latest updates
 
-- October 2025: PathoROB is now available on Hugging Face and GitHub. 
+- December 2025: PathoROB codes are available on GitHub.
+- October 2025: PathoROB data are available on Hugging Face.
 
 ## Licenses
 
