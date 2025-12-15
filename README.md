@@ -184,7 +184,7 @@ class MyModelWrapper(ModelWrapper):
 ## Latest updates
 
 - December 2025: PathoROB codes are available on GitHub.
-- October 2025: PathoROB data are available on Hugging Face.
+- September 2025: PathoROB data are available on Hugging Face.
 
 ## Licenses
 
