@@ -38,7 +38,7 @@ PathoROB contains **four datasets** covering 28 biological classes from 34 medic
 |   19 | Phikon-v2               |    0.619 |    0.019 |        0.768 |       0.469 |
 |   20 | Ciga                    |    0.511 |    0.135 |        0.693 |       0.446 |
 
-All results were computed as part of our benchmarking study. For details as well as for the APD and clustering score results, please check our [preprint](https://arxiv.org/abs/2507.17845). 
+All results were computed as part of our benchmarking study. For details as well as for the APD and clustering score results, please check our [preprint](https://arxiv.org/abs/2507.17845).
 
 > [!Note]
 > If you want your model to be added, please [contact](#contact) us.
@@ -53,7 +53,7 @@ git clone https://github.com/bifold-pathomics/PathoROB.git
 cd PathoROB
 conda create -n "pathorob" python=3.10 -y
 conda activate pathorob
-pip install -r requirements.txt
+pip install -e .
 ```
 
 > [!Note]
@@ -66,7 +66,7 @@ pip install -r requirements.txt
 python3 -m pathorob.features.extract_features --model uni2h_clsmean --model_args '{"hf_token": "<TOKEN>"}'
 ```
 
-For feature extraction, ~100K images (~2GB) will be downloaded from [Hugging Face](https://huggingface.co/collections/bifold-pathomics/pathorob-6899f50a714f446d0c974f87). 
+For feature extraction, ~100K images (~2GB) will be downloaded from [Hugging Face](https://huggingface.co/collections/bifold-pathomics/pathorob-6899f50a714f446d0c974f87).
 
 - Results: `data/features/uni2h_clsmean`
 - Datasets: Per default, features for all PathoROB datasets will be extracted (`camelyon`, `tcga`, `tolkach_esca`). To select any subset of these, use `--datasets <dataset1> ...`.
@@ -84,7 +84,7 @@ python3 -m pathorob.robustness_index.robustness_index --model uni2h_clsmean
   - `{model}/{dataset}/{max_patches_per_combi}_{k_opt_param}/results_summary.json`:
     - Summary of the results including the final robustness index and the k parameter used.
   - `{model}/{dataset}/{max_patches_per_combi}_{k_opt_param}/fig`:
-    - Folder with additional visualizations if the `--plot_graphs` flag is set. 
+    - Folder with additional visualizations if the `--plot_graphs` flag is set.
   - `{model}/{dataset}/{max_patches_per_combi}_{k_opt_param}/balanced-accuracies-bio.json`:
     - Balanced accuracy of the kNN classifier for selecting the k value if required.
   - `{model}/{dataset}/{max_patches_per_combi}_{k_opt_param}/frequency-same-class.pkl`:
@@ -125,7 +125,7 @@ python3 -m pathorob.clustering_score.clustering_score --model uni2h_clsmean
 
 - Results: `results/clustering_score` (see example results here)
    - `{model}/{dataset}/results_summary.json`:
-     - Summary of the results including the final clustering score. 
+     - Summary of the results including the final clustering score.
    - `{model}/{dataset}/aris.csv`:
      - Raw Adjusted Rand Index (ARI) and clustering scores for all for repetitions.
    - `{model}/{dataset}/silhouette_scores.csv`:
@@ -151,7 +151,7 @@ class MyModelWrapper(ModelWrapper):
     def __init__(self, ...):
         """
         Optional: Define custom arguments that can be passed to the model in the
-        extract_features entrypoint via `--model_args` as a dictionary. 
+        extract_features entrypoint via `--model_args` as a dictionary.
         """
 
     def get_model(self):
@@ -243,7 +243,7 @@ Please also cite the source publications of _all_ PathoROB datasets that you use
 @article{bandi19camelyon17,
     title={From Detection of Individual Metastases to Classification of Lymph Node Status at the Patient Level: The CAMELYON17 Challenge},
     author={Bándi, Péter and Geessink, Oscar and Manson, Quirine and Van Dijk, Marcory and Balkenhol, Maschenka and Hermsen, Meyke and Ehteshami Bejnordi, Babak and Lee, Byungjae and Paeng, Kyunghyun and Zhong, Aoxiao and Li, Quanzheng and Zanjani, Farhad Ghazvinian and Zinger, Svitlana and Fukuta, Keisuke and Komura, Daisuke and Ovtcharov, Vlado and Cheng, Shenghua and Zeng, Shaoqun and Thagaard, Jeppe and Dahl, Anders B. and Lin, Huangjing and Chen, Hao and Jacobsson, Ludwig and Hedlund, Martin and Çetin, Melih and Halıcı, Eren and Jackson, Hunter and Chen, Richard and Both, Fabian and Franke, Jörg and Küsters-Vandevelde, Heidi and Vreuls, Willem and Bult, Peter and van Ginneken, Bram and van der Laak, Jeroen and Litjens, Geert},
-    journal={IEEE Transactions on Medical Imaging}, 
+    journal={IEEE Transactions on Medical Imaging},
     year={2019},
     volume={38},
     number={2},
