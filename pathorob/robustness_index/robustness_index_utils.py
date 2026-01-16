@@ -221,7 +221,8 @@ def aggregate_stats(all_stats, compute_bootstrapped_robustness_index=True):
                 avg_results[k] = []
                 for r in results:
                     avg_results[k].append(r[k])
-                total_stats[key][k] = np.vstack(avg_results[k]).mean(axis=0)
+                min_n_neighbours = np.min([ar.shape[0] for ar in avg_results[k]])
+                total_stats[key][k] = np.vstack([ar[:min_n_neighbours] for ar in avg_results[k]]).mean(axis=0)
         else:
             raise ValueError("tbd unhandled key (stats per class)", key, "type", type(all_stats[0][key]))
 
