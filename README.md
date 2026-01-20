@@ -209,7 +209,7 @@ We want to thank the authors of the original datasets for making their data publ
 
 If you have questions or feedback, please contact:
 - Jonah Kömen (koemen@tu-berlin.de)
-- Edwin D. de Jong (edwin.dejong@aignostics.com)
+- Edwin D. de Jong (jong.de.edwin.work@gmail.com)
 - Julius Hense (j.hense@tu-berlin.de)
 
 ## How to cite
