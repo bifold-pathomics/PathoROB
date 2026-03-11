@@ -1,3 +1,4 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18961604.svg)](https://doi.org/10.5281/zenodo.18961604)
 # PathoROB
 
 [Preprint](https://arxiv.org/abs/2507.17845) | [Hugging Face](https://huggingface.co/collections/bifold-pathomics/pathorob-6899f50a714f446d0c974f87) |  [User Guide](#user-guide) | [Licenses](#licenses) | [Cite](#how-to-cite)
