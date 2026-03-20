@@ -40,7 +40,7 @@ PathoROB contains **four datasets** covering 28 biological classes from 34 medic
 |   20 | Phikon-v2               |    0.619 |    0.019 |        0.768 |       0.469 |
 |   21 | Ciga                    |    0.511 |    0.135 |        0.693 |       0.446 |
 
-All results were computed as part of our benchmarking study. For details as well as for the APD and clustering score results, please check our [preprint](https://arxiv.org/abs/2507.17845).
+All results were computed as part of our benchmarking study except for [Atlas 2](https://arxiv.org/pdf/2601.05148) where results were taken from the paper. For details as well as for the APD and clustering score results, please check our [preprint](https://arxiv.org/abs/2507.17845).
 
 > [!Note]
 > If you want your model to be added, please [contact](#contact) us.
