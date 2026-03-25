@@ -18,28 +18,29 @@ PathoROB contains **four datasets** covering 28 biological classes from 34 medic
 
 | Rank | Foundation Model        | TCGA 2x2 | Camelyon | Tolkach ESCA | Average (↓) |
 |------|:------------------------|---------:|---------:|-------------:|------------:|
-|    1 | Virchow2                |    0.822 |    0.806 |        0.955 |       0.861 |
-|    2 | CONCHv1.5               |    0.832 |    0.774 |        0.951 |       0.852 |
-|    3 | Atlas                   |    0.826 |    0.785 |        0.938 |       0.850 |
-|    4 | Virchow                 |    0.761 |    0.751 |        0.932 |       0.815 |
-|    5 | H0-mini                 |    0.794 |    0.718 |        0.932 |       0.815 |
-|    6 | Conch                   |    0.824 |    0.662 |        0.951 |       0.812 |
-|    7 | H-optimus-0             |    0.812 |    0.705 |        0.918 |       0.812 |
-|    8 | UNI2-h                  |    0.803 |    0.544 |        0.923 |       0.757 |
-|    9 | MUSK                    |    0.727 |    0.467 |        0.928 |       0.707 |
-|   10 | HIPT                    |    0.614 |    0.649 |        0.726 |       0.663 |
-|   11 | Prov-GigaPath           |    0.738 |    0.399 |        0.754 |       0.630 |
-|   12 | Kaiko ViT-B/8           |    0.763 |    0.147 |        0.896 |       0.602 |
-|   13 | UNI                     |    0.747 |    0.145 |        0.902 |       0.598 |
-|   14 | RETCCL                  |    0.593 |    0.318 |        0.878 |       0.596 |
-|   15 | CTransPath              |    0.652 |    0.106 |        0.872 |       0.543 |
-|   16 | Kang-DINO               |    0.661 |    0.043 |        0.832 |       0.512 |
-|   17 | RudolfV                 |    0.587 |    0.184 |        0.695 |       0.489 |
-|   18 | Phikon                  |    0.623 |    0.011 |        0.795 |       0.476 |
-|   19 | Phikon-v2               |    0.619 |    0.019 |        0.768 |       0.469 |
-|   20 | Ciga                    |    0.511 |    0.135 |        0.693 |       0.446 |
+|    1 | Atlas 2                 |    0.879 |    0.940 |        0.964 |       0.928 |
+|    2 | Virchow2                |    0.822 |    0.806 |        0.955 |       0.861 |
+|    3 | CONCHv1.5               |    0.832 |    0.774 |        0.951 |       0.852 |
+|    4 | Atlas                   |    0.826 |    0.785 |        0.938 |       0.850 |
+|    5 | Virchow                 |    0.761 |    0.751 |        0.932 |       0.815 |
+|    6 | H0-mini                 |    0.794 |    0.718 |        0.932 |       0.815 |
+|    7 | Conch                   |    0.824 |    0.662 |        0.951 |       0.812 |
+|    8 | H-optimus-0             |    0.812 |    0.705 |        0.918 |       0.812 |
+|    9 | UNI2-h                  |    0.803 |    0.544 |        0.923 |       0.757 |
+|   10 | MUSK                    |    0.727 |    0.467 |        0.928 |       0.707 |
+|   11 | HIPT                    |    0.614 |    0.649 |        0.726 |       0.663 |
+|   12 | Prov-GigaPath           |    0.738 |    0.399 |        0.754 |       0.630 |
+|   13 | Kaiko ViT-B/8           |    0.763 |    0.147 |        0.896 |       0.602 |
+|   14 | UNI                     |    0.747 |    0.145 |        0.902 |       0.598 |
+|   15 | RETCCL                  |    0.593 |    0.318 |        0.878 |       0.596 |
+|   16 | CTransPath              |    0.652 |    0.106 |        0.872 |       0.543 |
+|   17 | Kang-DINO               |    0.661 |    0.043 |        0.832 |       0.512 |
+|   18 | RudolfV                 |    0.587 |    0.184 |        0.695 |       0.489 |
+|   19 | Phikon                  |    0.623 |    0.011 |        0.795 |       0.476 |
+|   20 | Phikon-v2               |    0.619 |    0.019 |        0.768 |       0.469 |
+|   21 | Ciga                    |    0.511 |    0.135 |        0.693 |       0.446 |
 
-All results were computed as part of our benchmarking study. For details as well as for the APD and clustering score results, please check our [preprint](https://arxiv.org/abs/2507.17845).
+All results were computed as part of our benchmarking study except for [Atlas 2](https://arxiv.org/pdf/2601.05148) where results were taken from the paper. For details as well as for the APD and clustering score results, please check our [preprint](https://arxiv.org/abs/2507.17845).
 
 > [!Note]
 > If you want your model to be added, please [contact](#contact) us.
