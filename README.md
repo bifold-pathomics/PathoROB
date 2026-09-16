@@ -223,16 +223,16 @@ If you have questions or feedback, please contact:
 If you find **PathoROB** useful, please cite our full paper:
 ```
 @article{koemen2026pathorob,
-    title = {Towards robust foundation models for digital pathology},
-    author = {Jonah Kömen and Edwin D de Jong and Julius Hense and Hannah Marienwald and Jonas Dippel and Philip Naumann and Eric Marcus and Lukas Ruff and Maximilian Alber and Jonas Teuwen and Frederick Klauschen and Klaus-Robert Müller},
-    journal = {Nature Communications},
-    volume = {17},
-    issue = {1},
-    pages = {5218},
-    year = {2026},
-    doi = {10.1038/s41467-026-73923-2},
-    issn = {2041-1723},
-    url = {https://doi.org/10.1038/s41467-026-73923-2},
+    title={Towards robust foundation models for digital pathology},
+    author={Jonah Kömen and Edwin D de Jong and Julius Hense and Hannah Marienwald and Jonas Dippel and Philip Naumann and Eric Marcus and Lukas Ruff and Maximilian Alber and Jonas Teuwen and Frederick Klauschen and Klaus-Robert Müller},
+    journal={Nature Communications},
+    volume={17},
+    issue={1},
+    pages={5218},
+    year={2026},
+    doi={10.1038/s41467-026-73923-2},
+    issn={2041-1723},
+    url={https://doi.org/10.1038/s41467-026-73923-2},
 }
 ```
 
