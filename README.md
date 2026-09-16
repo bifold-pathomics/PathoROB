@@ -187,6 +187,8 @@ class MyModelWrapper(ModelWrapper):
 
 ## Latest updates
 
+- September 2026: PathoROB has been featured in the Nature Communications Editor's Highlights page for Cancer.
+- June 2026: PathoROB has been published in Nature Communications.
 - December 2025: PathoROB codes are available on GitHub.
 - September 2025: PathoROB data are available on Hugging Face.
 
