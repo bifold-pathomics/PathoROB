@@ -19,16 +19,16 @@ PathoROB contains **four datasets** covering 28 biological classes from 34 medic
 | Rank | Foundation Model                                                                                      |      TCGA 2x2 |  Camelyon |  Tolkach ESCA |      Average (↓) |
 |------|:------------------------------------------------------------------------------------------------------|--------------:|----------:|--------------:|-----------------:|
 | 1    | Atlas 2 <sup>[[1]](https://arxiv.org/pdf/2601.05148)</sup>                                            |         0.879 |     0.940 |         0.964 |            0.928 |
-| 2    | RudolfV 2-S                                                                                           |         0.857 |     0.930 |         0.965 |            0.917 |
-| 3    | RudolfV 2                                                                                             |         0.861 |     0.897 |         0.964 |            0.907 |
-| 4    | RudolfV 2-B                                                                                           |         0.853 |     0.877 |         0.959 |            0.896 |
-| 5    | GenBio-PathFM <sup>[[2]](https://www.biorxiv.org/content/10.64898/2026.03.17.712534v1.full.pdf)</sup> |         0.838 |     0.865 |         0.960 |            0.888 |
+| 2    | RudolfV 2-S <sup>[[2]](https://cdn.prod.website-files.com/67adb01f31489469b513304a/6a74e2f9f1d4aef06489a3f1_RudolfV_2_260806.pdf)</sup> |         0.857 |     0.930 |         0.965 |            0.917 |
+| 3    | RudolfV 2 <sup>[[2]](https://cdn.prod.website-files.com/67adb01f31489469b513304a/6a74e2f9f1d4aef06489a3f1_RudolfV_2_260806.pdf)</sup> |         0.861 |     0.897 |         0.964 |            0.907 |
+| 4    | RudolfV 2-B <sup>[[2]](https://cdn.prod.website-files.com/67adb01f31489469b513304a/6a74e2f9f1d4aef06489a3f1_RudolfV_2_260806.pdf)</sup> |         0.853 |     0.877 |         0.959 |            0.896 |
+| 5    | GenBio-PathFM <sup>[[3]](https://www.biorxiv.org/content/10.64898/2026.03.17.712534v1.full.pdf)</sup> |         0.838 |     0.865 |         0.960 |            0.888 |
 | 6    | Virchow2                                                                                              |         0.822 |     0.806 |         0.955 |            0.861 |
 | 7    | CONCHv1.5                                                                                             |         0.832 |     0.774 |         0.951 |            0.852 |
 | 8    | Atlas                                                                                                 |         0.826 |     0.785 |         0.938 |            0.850 |
 | 9    | Virchow                                                                                               |         0.761 |     0.751 |         0.932 |            0.815 |
 | 10   | H0-mini                                                                                               |         0.794 |     0.718 |         0.932 |            0.815 |
-| 11   | H-optimus-1 <sup>[[2]](https://www.biorxiv.org/content/10.64898/2026.03.17.712534v1.full.pdf)</sup> |         0.853 |     0.645 |         0.944 |            0.814 |
+| 11   | H-optimus-1 <sup>[[3]](https://www.biorxiv.org/content/10.64898/2026.03.17.712534v1.full.pdf)</sup> |         0.853 |     0.645 |         0.944 |            0.814 |
 | 12   | Conch                                                                                                 |         0.824 |     0.662 |         0.951 |            0.812 |
 | 13   | H-optimus-0                                                                                           |         0.812 |     0.705 |         0.918 |            0.812 |
 | 14   | UNI2-h                                                                                                |         0.803 |     0.544 |         0.923 |            0.757 |
