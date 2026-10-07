@@ -1,7 +1,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18961604.svg)](https://doi.org/10.5281/zenodo.18961604)
-# PathoROB
+# PathoROB (Nature Communications)
 
-[Preprint](https://arxiv.org/abs/2507.17845) | [Hugging Face](https://huggingface.co/collections/bifold-pathomics/pathorob-6899f50a714f446d0c974f87) |  [User Guide](#user-guide) | [Licenses](#licenses) | [Cite](#how-to-cite)
+[Full Paper](https://www.nature.com/articles/s41467-026-73923-2) | [Hugging Face](https://huggingface.co/collections/bifold-pathomics/pathorob-6899f50a714f446d0c974f87) |  [User Guide](#user-guide) | [Licenses](#licenses) | [Cite](#how-to-cite)
 
 **PathoROB is a benchmark for the robustness of pathology foundation models (FMs) to non-biological medical center differences.**
 
@@ -42,7 +42,7 @@ PathoROB contains **four datasets** covering 28 biological classes from 34 medic
 | 22   | Phikon-v2                                                                                             |         0.619 |     0.019 |         0.768 |            0.469 |
 | 23   | Ciga                                                                                                  |         0.511 |     0.135 |         0.693 |            0.446 |
 
-Results for models with superscripts <sup>[N]</sup> were taken from the linked external publications. Note that they were not validated by the authors of this repository. All other results were computed as part of our benchmarking study. For details as well as for the APD and clustering score results, please check our [preprint](https://arxiv.org/abs/2507.17845).
+Results for models with superscripts <sup>[N]</sup> were taken from the linked external publications. Note that they were not validated by the authors of this repository. All other results were computed as part of our benchmarking study. For details as well as for the APD and clustering score results, please check our [full paper](https://www.nature.com/articles/s41467-026-73923-2).
 
 > [!Note]
 > If you want your model to be added, please [contact](#contact) us.
@@ -94,7 +94,7 @@ python3 -m pathorob.robustness_index.robustness_index --model uni2h_clsmean
   - `{model}/{dataset}/{max_patches_per_combi}_{k_opt_param}/frequency-same-class.pkl`:
     - Raw results for computing the robustness index.
 - Further arguments: `pathorob/robustness_index/robustness_index.py`
-  - Notice: per default, we use the `k` values per dataset as determined in our [preprint](https://arxiv.org/abs/2507.17845).
+  - Notice: per default, we use the `k` values per dataset as determined in our [full paper](https://www.nature.com/articles/s41467-026-73923-2).
 
 After computing the robustness index for multiple models, you can create further visualizations to compare them:
 
@@ -187,6 +187,8 @@ class MyModelWrapper(ModelWrapper):
 
 ## Latest updates
 
+- September 2026: PathoROB has been featured in the Nature Communications Editor's Highlights page for Cancer.
+- June 2026: PathoROB has been published in Nature Communications.
 - December 2025: PathoROB codes are available on GitHub.
 - September 2025: PathoROB data are available on Hugging Face.
 
@@ -218,13 +220,19 @@ If you have questions or feedback, please contact:
 
 ## How to cite
 
-If you find **PathoROB** useful, please cite our preprint:
+If you find **PathoROB** useful, please cite our full paper:
 ```
-@article{koemen2025pathorob,
-    title={Towards Robust Foundation Models for Digital Pathology},
-    author={K{\"o}men, Jonah and de Jong, Edwin D and Hense, Julius and Marienwald, Hannah and Dippel, Jonas and Naumann, Philip and Marcus, Eric and Ruff, Lukas and Alber, Maximilian and Teuwen, Jonas and others},
-    journal={arXiv preprint arXiv:2507.17845},
-    year={2025}
+@article{koemen2026pathorob,
+    title={Towards robust foundation models for digital pathology},
+    author={Jonah Kömen and Edwin D de Jong and Julius Hense and Hannah Marienwald and Jonas Dippel and Philip Naumann and Eric Marcus and Lukas Ruff and Maximilian Alber and Jonas Teuwen and Frederick Klauschen and Klaus-Robert Müller},
+    journal={Nature Communications},
+    volume={17},
+    issue={1},
+    pages={5218},
+    year={2026},
+    doi={10.1038/s41467-026-73923-2},
+    issn={2041-1723},
+    url={https://doi.org/10.1038/s41467-026-73923-2},
 }
 ```
 
