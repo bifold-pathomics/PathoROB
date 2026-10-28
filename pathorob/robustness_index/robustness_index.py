@@ -491,7 +491,7 @@ def compute(
     meta = get_meta(data_manager, dataset, options["paired_evaluation"])
     meta = reduce_dataset(meta, max_patches_per_combi=max_patches_per_combi)
 
-    robustness_metrics_dict, results = calc_rob_index_model(options["paired_evaluation"], data_manager, model, dataset, meta,
+    bio_class_prediction_results, robustness_metrics_dict = calc_rob_index_model(options["paired_evaluation"], data_manager, model, dataset, meta,
                                                       results_folder, fig_folder,
                                                       num_workers=num_workers,
                                                       k_opt_param=k_opt_param,
@@ -502,13 +502,13 @@ def compute(
     dt = t_end_calc - t_start
     print(f"calculation time {dt:.2f} seconds = {dt/60:.2f} minutes = {dt/3600:.2f} hours")
 
-    k_opt = results[model]['k_opt'] if k_opt_param == -1 else k_opt_param
+    k_opt = robustness_metrics_dict[model]['k_opt'] if k_opt_param == -1 else k_opt_param
     if plot_graphs:
         robustness_graphs.plot_results(model, results_folder, fig_folder, k_opt)
 
-    if results:
+    if robustness_metrics_dict:
         median_k_opt = get_median_k_opt_given_dataset(dataset)
-        result = results_summary(model, meta, max_patches_per_combi, median_k_opt, results, dt)
+        result = results_summary(model, meta, max_patches_per_combi, median_k_opt, robustness_metrics_dict, dt)
         print("final result", result)
 
     return robustness_metrics_dict
