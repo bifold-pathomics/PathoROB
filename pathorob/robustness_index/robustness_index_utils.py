@@ -760,11 +760,9 @@ def save_total_stats(stats, meta, dataset, model, results_folder, k_opt, bal_acc
     df_dict["OOD_performance"] = stats["OOD_performance"][index_k_opt]
     df_dict["generalization_index"] = stats["generalization_index"][index_k_opt]
 
-    if "robustness_index-mean" in stats and len(stats["robustness_index-mean"]) > index_k_opt:
-        stats["robustness_index-mean"] = stats["robustness_index-mean"][index_k_opt]
-        stats["robustness_index-std"] = stats["robustness_index-mean"][index_k_opt]
-        df_dict["robustness_index-mean"] = stats["robustness_index-mean"]
-        df_dict["robustness_index-std"] = stats["robustness_index-std"]
+    if "robustness_index-mean" in stats and len(stats["robustness_index-mean"]) > 1:
+        df_dict["robustness_index-mean"] = stats["robustness_index-mean"][index_k_opt]
+        df_dict["robustness_index-std"] = stats["robustness_index-std"][index_k_opt]
 
     biological_class_field, confounding_class_field = get_field_names_given_dataset(dataset)
     all_bio_classes = np.unique(meta[biological_class_field].values)
